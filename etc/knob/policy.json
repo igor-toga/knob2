@@ -1,0 +1,35 @@
+{
+    "context_is_admin":  "role:admin and is_admin_project:True",
+    "admin_or_owner":  "rule:context_is_admin or project_id:%(project_id)s",
+    "default": "",
+
+    "gate:list": "rule:admin_or_owner",
+    "gate:create:aggregations": "rule:admin_or_owner",
+    "gate:delete": "rule:admin_or_owner",
+    "target:list": "rule:admin_or_owner",
+    "target:create:aggregations": "rule:admin_or_owner",
+    "target:delete": "rule:admin_or_owner",
+    "associate:list": "rule:admin_or_owner",
+    "associate:create:aggregations": "rule:admin_or_owner",
+    "associate:delete": "rule:admin_or_owner",
+    
+
+    "resource:OS::Glance::Image": "rule:admin_or_owner",
+    "resource:OS::Glance::Metadef": "rule:admin_or_owner",
+    "resource:OS::Nova::Server": "rule:admin_or_owner",
+    "resource:OS::Nova::Hypervisor": "rule:context_is_admin",
+    "resource:OS::Nova::ServerGroup": "rule:admin_or_owner",
+    "resource:OS::Nova::Flavor": "rule:admin_or_owner",
+    "resource:OS::Cinder::Volume": "rule:admin_or_owner",
+    "resource:OS::Cinder::Snapshot": "rule:admin_or_owner",
+    "resource:OS::Designate::Zone": "rule:admin_or_owner",
+    "resource:OS::Designate::RecordSet": "rule:admin_or_owner",
+    "resource:OS::Neutron::Net": "rule:admin_or_owner",
+    "resource:OS::Neutron::Port": "rule:admin_or_owner",
+    "resource:OS::Neutron::Subnet": "rule:admin_or_owner",
+    "resource:OS::Neutron::Router": "rule:admin_or_owner",
+    "resource:OS::Neutron::SecurityGroup": "rule:admin_or_owner",
+    "resource:OS::Ironic::Chassis": "rule:admin_or_owner",
+    "resource:OS::Ironic::Node": "rule:admin_or_owner",
+    "resource:OS::Ironic::Port": "rule:admin_or_owner"
+}

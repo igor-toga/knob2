@@ -1,0 +1,274 @@
+#!/bin/bash
+#
+#-------------------------------------------------------------------------------
+# Destination path for installation
+#HOST_IP=172.0.0.5
+#SERVICE_HOST=${HOST_IP}
+SERVICE_LOCAL_HOST=127.0.0.1
+SERVICE_LISTEN_ADDRESS=0.0.0.0
+#SERVICE_IP_VERSION=4
+SERVICE_PASSWORD=stack
+ADMIN_PASSWORD=stack
+MYSQL_PASSWORD=stack
+REGION_NAME=${REGION_NAME:-RegionOne}
+#SERVICE_PROTOCOL=${SERVICE_PROTOCOL:-http}
+#STACK_USER=stack
+SERVICE_TENANT_NAME=${SERVICE_TENANT_NAME:-service}
+SERVICE_PROJECT_NAME=${SERVICE_TENANT_NAME:-service}
+SERVICE_TIMEOUT=${SERVICE_TIMEOUT:-5}
+SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT=${SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT:-5}
+
+
+
+TIMESTAMP_FORMAT=${TIMESTAMP_FORMAT:-"%F-%H%M%S"}
+CURRENT_LOG_TIME=$(date "+$TIMESTAMP_FORMAT")
+
+DEST=/opt/stack
+DATA_DIR=${DEST}/data
+SERVICE_DIR=${DEST}/status
+LOGDIR=$DEST/logs
+SCREEN_NAME=${SCREEN_NAME:-stack}
+
+SYSLOG=False
+LOG_COLOR=True
+
+export PYTHON2_VERSION=${PYTHON2_VERSION:-2.7}
+
+
+# Set Keystone interface configuration
+KEYSTONE_AUTH_PORT=${KEYSTONE_AUTH_PORT:-35357}
+KEYSTONE_AUTH_PORT_INT=${KEYSTONE_AUTH_PORT_INT:-35358}
+
+# Public facing bits
+KEYSTONE_SERVICE_PORT=${KEYSTONE_SERVICE_PORT:-5000}
+KEYSTONE_SERVICE_PORT_INT=${KEYSTONE_SERVICE_PORT_INT:-5001}
+
+# Default Neutron Port
+Q_PORT=${Q_PORT:-9696}
+Q_PORT_INT=${Q_PORT_INT:-19696}
+Q_ADMIN_USERNAME=${Q_ADMIN_USERNAME:-neutron}
+Q_AUTH_STRATEGY=${Q_AUTH_STRATEGY:-keystone}
+#--------------------------------------------------------------------------------------
+
+# Save trace setting
+_XTRACE_KNOB=$(set +o | grep xtrace)
+set +o xtrace
+
+
+# Defaults
+# --------
+
+KNOB_DIR=$DEST/knob
+KNOB_BIN_DIR="/usr/local/bin"
+
+KNOB_STATE_PATH=${KNOB_STATE_PATH:=$DATA_DIR/knob}
+KNOB_AUTH_CACHE_DIR=${KNOB_AUTH_CACHE_DIR:-/var/cache/knob}
+KNOB_CONF_DIR=/etc/knob
+KNOB_CONF=$KNOB_CONF_DIR/knob.conf
+
+
+KNOB_SERVICE_PORT=${KNOB_SERVICE_PORT:-2712}
+KNOB_SERVICE_PORT_INT=${KNOB_SERVICE_PORT_INT:-12712}
+
+KNOB_PERIODIC_INTERVAL=${KNOB_PERIODIC_INTERVAL:-60}
+KNOB_USE_MOD_WSGI=${KNOB_USE_MOD_WSGI:-False}
+:
+# Functions
+# ---------
+# Determinate is the given option present in the INI file
+# ini_has_option config-file section option
+function _run_process_knob {
+    # disable tracing through the exec redirects, it's just confusing in the logs.
+    xtrace=$(set +o | grep xtrace)
+    set +o xtrace
+
+    local service=$1
+    local command="$2"
+    local group=$3
+
+    # Undo logging redirections and close the extra descriptors
+    #exec 1>&3
+    #exec 2>&3
+    #exec 3>&-
+    #exec 6>&-
+
+    local logfile="${service}.log.${CURRENT_LOG_TIME}"
+    local real_logfile="${LOGDIR}/${logfile}"
+    echo "LOG:" ${LOGDIR}
+    if [[ -n ${LOGDIR} ]]; then
+        #exec 1>&"$real_logfile" 2>&1
+        bash -c "cd '$LOGDIR' && ln -sf '$logfile' ${service}.log"
+
+        # TODO(dtroyer): Hack to get stdout from the Python interpreter for the logs.
+        export PYTHONUNBUFFERED=1
+    fi
+
+    # reenable xtrace before we do *real* work
+    $xtrace
+    
+    # Run under ``setsid`` to force the process to become a session and group leader.
+    # The pid saved can be used with pkill -g to get the entire process group.
+    if [[ -n "$group" ]]; then
+        setsid sg $group "$command" & echo $! >$SERVICE_DIR/$SCREEN_NAME/$service.pid
+    else
+        echo "Running command:" $command
+	echo "pid file: " $SERVICE_DIR/$SCREEN_NAME/$service.pid
+        #setsid $command & echo $! >$SERVICE_DIR/$SCREEN_NAME/$service.pid
+        # Foreground command run
+        $command
+    fi
+
+    # Just silently exit this process
+    exit 0
+}
+
+# Run a single service under screen or directly
+# If the command includes shell metachatacters (;<>*) it must be run using a shell
+# If an optional group is provided sg will be used to run the
+# command as that group.
+# Uses globals ``USE_SCREEN``
+# run_process service "command-line" [group]
+function run_process_knob {
+    local service=$1
+    local command="$2"
+    local group=$3
+    local subservice=$4
+
+    local name=${subservice:-$service}
+
+    time_start "run_process"
+    # Spawn directly without screen
+    _run_process_knob "$name" "$command" "$group" &
+    time_stop "run_process"
+}
+
+# Stop a service process
+# If a PID is available use it, kill the whole process group via TERM
+# If screen is being used kill the screen window; this will catch processes
+# that did not leave a PID behind
+# Uses globals ``SERVICE_DIR``, ``USE_SCREEN``
+# stop_process service
+function stop_process_knob {
+    local service=$1
+
+
+   # Kill via pid if we have one available
+   if [[ -r $SERVICE_DIR/$SCREEN_NAME/$service.pid ]]; then
+        pkill -g $(cat $SERVICE_DIR/$SCREEN_NAME/$service.pid)
+        # oslo.service tends to stop actually shutting down
+        # reliably in between releases because someone believes it
+        # is dying too early due to some inflight work they
+        # have. This is a tension. It happens often enough we're
+        # going to just account for it in devstack and assume it
+        # doesn't work.
+        #
+        # Set OSLO_SERVICE_WORKS=True to skip this block
+        if [[ -z "$OSLO_SERVICE_WORKS" ]]; then
+            # TODO(danms): Remove this double-kill when we have
+            # this fixed in all services:
+            # https://bugs.launchpad.net/oslo-incubator/+bug/1446583
+            sleep 1
+            # /bin/true because pkill on a non existent process returns an error
+            pkill -g $(cat $SERVICE_DIR/$SCREEN_NAME/$service.pid) || /bin/true
+        fi
+        rm $SERVICE_DIR/$SCREEN_NAME/$service.pid
+   fi
+}
+
+
+# configure_knob() - Set config files, create data dirs, etc
+function configure_knob {
+    sudo install -d -o $STACK_USER -m 755 $KNOB_CONF_DIR
+
+    #cp -p $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR
+
+    rm -f $KNOB_CONF
+
+
+    iniset $KNOB_CONF DEFAULT auth_strategy keystone
+    iniset $KNOB_CONF DEFAULT rootwrap_config "$KNOB_CONF_DIR/rootwrap.conf"
+    iniset $KNOB_CONF DEFAULT state_path $KNOB_STATE_PATH
+    iniset $KNOB_CONF oslo_concurrency lock_path $KNOB_STATE_PATH
+    iniset $KNOB_CONF DEFAULT periodic_interval $KNOB_PERIODIC_INTERVAL
+    iniset $KNOB_CONF DEFAULT os_region_name "$REGION_NAME"
+    iniset $KNOB_CONF database connection `database_connection_url knob`
+
+    # Format logging
+    # Set req-id, project-name and resource in log format
+    iniset $KNOB_CONF DEFAULT logging_context_format_string "%(asctime)s.%(msecs)03d %(levelname)s %(name)s [%(request_id)s %(project_name)s] %(resource)s%(message)s"
+
+    # Set os_privileged_user credentials (used for os-assisted-snapshots)
+    iniset $KNOB_CONF DEFAULT os_privileged_user_name nova
+    iniset $KNOB_CONF DEFAULT os_privileged_user_password "$SERVICE_PASSWORD"
+    iniset $KNOB_CONF DEFAULT os_privileged_user_tenant "$SERVICE_PROJECT_NAME"
+    iniset $KNOB_CONF DEFAULT graceful_shutdown_timeout "$SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT"
+
+
+    create_knob_conf_neutron
+
+}
+
+function create_knob_conf_neutron {
+    iniset $KNOB_CONF DEFAULT use_neutron True
+    iniset $KNOB_CONF neutron auth_type "password"
+    iniset $KNOB_CONF neutron auth_url "$SERVICE_PROTOCOL://$SERVICE_HOST:$KEYSTONE_AUTH_PORT/v3"
+    iniset $KNOB_CONF neutron username "$Q_ADMIN_USERNAME"
+    iniset $KNOB_CONF neutron password "$SERVICE_PASSWORD"
+    iniset $KNOB_CONF neutron user_domain_name "Default"
+    iniset $KNOB_CONF neutron project_name "$SERVICE_PROJECT_NAME"
+    iniset $KNOB_CONF neutron project_domain_name "Default"
+    iniset $KNOB_CONF neutron auth_strategy "$Q_AUTH_STRATEGY"
+    iniset $KNOB_CONF neutron region_name "$REGION_NAME"
+    iniset $KNOB_CONF neutron url "${SERVICE_PROTOCOL}://$SERVICE_HOST:$Q_PORT"
+}
+
+
+# start_knob() - Start running processes, including screen
+function start_knob {
+    local service_port=$KNOB_SERVICE_PORT
+    local service_protocol=$SERVICE_PROTOCOL
+
+    run_process_knob k-ssh "$KNOB_BIN_DIR/knob-ssh --config-file $KNOB_CONF"
+    #echo "Waiting for Knob API to start..."
+    #if ! wait_for_service $SERVICE_TIMEOUT $service_protocol://$SERVICE_HOST:$service_port; then
+    #    die $LINENO "k-shh did not start"
+    #fi
+    }
+
+# stop_knob() - Stop running processes
+function stop_knob {
+    stop_process_knob k-ssh
+}
+
+
+# init_knob() - Initialize databases, etc.
+function init_knob {
+    mkdir -p $KNOB_STATE_PATH
+    # (Re)create cinder database
+    recreate_database knob
+
+    # Migrate cinder database
+    $KNOB_BIN_DIR/knob-manage  --config-file $KNOB_CONF db_sync
+}
+
+function create_knob_accounts {
+
+   create_service_user "knob"
+
+   get_or_create_service "knob" "ssh" "Knob Service"
+   get_or_create_endpoint \
+        "ssh" \
+        "$REGION_NAME" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/"
+}
+
+
+# Restore xtrace
+$_XTRACE_KNOB
+
+# Tell emacs to use shell-script-mode
+## Local variables:
+## mode: shell-script
+## End:
