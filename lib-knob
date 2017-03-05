@@ -181,6 +181,7 @@ function configure_knob {
     sudo install -d -o $STACK_USER -m 755 $KNOB_CONF_DIR
 
     #cp -p $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR
+    cp $KNOB_DIR/etc/knob/api-paste.ini $KNOB_CONF_DIR/api-paste.ini
 
     rm -f $KNOB_CONF
 

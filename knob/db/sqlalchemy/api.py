@@ -10,7 +10,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """Implementation of SQLAlchemy backend."""
 from oslo_config import cfg
 from oslo_db import options
@@ -52,6 +51,10 @@ def get_facade():
         # to allow access to the Engine once constructed.
         db_context.configure(**CONF.database)
         _facade = db_context.get_legacy_facade()
+        #_facade = db_session.EngineFacade(
+        #        CONF.database.connection,
+        #        **dict(CONF.database))
+        #_facade = create_engine(CONF.database)
         # if CONF.profiler.enabled:
         #    if CONF.profiler.trace_sqlalchemy:
         #        osprofiler.sqlalchemy.add_tracing(sqlalchemy,
@@ -66,6 +69,7 @@ def get_engine():
 
 def get_session():
     return get_facade().get_session()
+    
 
 
 def update_and_save(context, obj, values):
@@ -250,7 +254,6 @@ def associate_delete(context, deployment_id):
 def service_create(context, values):
     service = models.Service()
     service.update(values)
-    print (context.session)
     service.save(context.session)
     return service
 

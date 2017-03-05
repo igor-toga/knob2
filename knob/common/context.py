@@ -143,7 +143,6 @@ class RequestContext(context.RequestContext):
     def session(self):
         if self._session is None:
             self._session = db_api.get_session()
-        print ( "--------------Sessin called ------------------")
         return self._session
 
     @property

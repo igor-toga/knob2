@@ -64,7 +64,7 @@ def create_service_ref(host, binary, topic):
                                         topic=topic)
         
     if not service_ref:
-        do_create_service_ref(context, host, binary, topic)
+        do_create_service_ref(ctxt, host, binary, topic)
             
 def launch_api(setup_logging=True):
     if setup_logging:
