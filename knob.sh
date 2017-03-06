@@ -46,9 +46,9 @@ fi
 echo " ---> Configure knob service"
 configure_knob
 
-#echo " ---> Create knob accounts"
-#source $TOP_DIR/userrc_early
-#create_knob_accounts
+echo " ---> Create knob accounts"
+source $TOP_DIR/userrc_early
+create_knob_accounts
 
 echo " ---> Init knob"
 init_knob

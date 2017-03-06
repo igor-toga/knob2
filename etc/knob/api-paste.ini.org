@@ -1,0 +1,36 @@
+# Use this pipeline for no auth - DEFAULT
+[pipeline:knob]
+pipeline = cors http_proxy_to_wsgi versionnegotiation unauthenticated-context rootapp
+
+[pipeline:knob-keystone]
+pipeline = cors versionnegotiation authtoken context rootapp
+
+[composite:rootapp]
+paste.composite_factory = knob.api:root_app_factory
+/: apiversions
+/v1: apiv1app
+
+[app:apiversions]
+paste.app_factory = knob.api.versions:create_resource
+
+[app:apiv1app]
+paste.app_factory = knob.api:API.factory
+
+[filter:versionnegotiation]
+paste.filter_factory = knob.common.wsgi:filter_factory
+#knob.filter_factory = knob.api.openstack:version_negotiation_filter
+
+[filter:authtoken]
+paste.filter_factory = keystonemiddleware.auth_token:filter_factory
+delay_auth_decision = true
+
+[filter:context]
+paste.filter_factory = knob.common.context:ContextMiddleware_filter_factory
+
+[filter:cors]
+paste.filter_factory = oslo_middleware.cors:filter_factory
+oslo_config_project = knob
+
+[filter:http_proxy_to_wsgi]
+paste.filter_factory = oslo_middleware.http_proxy_to_wsgi:HTTPProxyToWSGI.factory
+oslo_config_project = knob

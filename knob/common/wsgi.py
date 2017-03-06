@@ -61,7 +61,7 @@ api_opts = [
               help=_('Address to bind the server. Useful when '
                      'selecting a particular network interface.'),
               deprecated_group='DEFAULT'),
-    cfg.PortOpt('bind_port', default=8004,
+    cfg.PortOpt('bind_port', default=2712,
                 help=_('The port on which the server will listen.'),
                 deprecated_group='DEFAULT'),
     cfg.IntOpt('backlog', default=4096,
@@ -76,7 +76,7 @@ api_opts = [
                help=_("Location of the SSL key file to use "
                       "for enabling SSL mode."),
                deprecated_group='DEFAULT'),
-    cfg.IntOpt('workers', min=0, default=0,
+    cfg.IntOpt('workers', min=0, default=2,
                help=_("Number of workers for knob service. "
                       "Default value 0 means, that service will start number "
                       "of workers equal number of cores on server."),

@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import routes
 import six
 
@@ -19,6 +20,28 @@ from knob.api import targets
 from knob.api import associates
 from knob.api import services
 from knob.common import wsgi
+
+
+from debtcollector import removals
+from knob.api.middleware import fault
+from knob.api.middleware import ssl
+from knob.api.middleware import version_negotiation as vn
+from knob.api import versions
+
+
+def version_negotiation_filter(app, conf, **local_conf):
+    return vn.VersionNegotiationFilter(versions.Controller, app,
+                                       conf, **local_conf)
+
+
+def faultwrap_filter(app, conf, **local_conf):
+    return fault.FaultWrapper(app)
+
+
+@removals.remove(message='Use oslo_middleware.http_proxy_to_wsgi instead.',
+                 version='6.0.0', removal_version='8.0.0')
+def sslmiddleware_filter(app, conf, **local_conf):
+    return ssl.SSLMiddleware(app)
 
 
 class API(wsgi.Router):
@@ -33,7 +56,6 @@ class API(wsgi.Router):
 
         def connect(controller, path_prefix, routes):
             """Connects list of routes to given controller with path_prefix.
-
             This function connects the list of routes to the given
             controller, prepending the given path_prefix. Then for each URL it
             finds which request methods aren't handled and configures those
