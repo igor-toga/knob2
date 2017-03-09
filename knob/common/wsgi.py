@@ -603,6 +603,7 @@ class Router(object):
 
         If no match, return a 404.
         """
+
         return self._router
 
     @staticmethod
@@ -636,6 +637,7 @@ class Request(webob.Request):
             raise exception.InvalidContentType(content_type=None)
 
         content_type = self.content_type
+
 
         if content_type not in allowed_content_types:
             raise exception.InvalidContentType(content_type=content_type)

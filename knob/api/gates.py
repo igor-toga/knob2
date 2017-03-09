@@ -14,8 +14,10 @@
 from webob import exc
 
 #from knob.api.openstack.v1 import util
+from knob.common import context
 from knob.common import serializers
 from knob.common import wsgi
+from knob.common.exception import KnobException
 
 
 class GateController(object):
@@ -29,8 +31,11 @@ class GateController(object):
     def __init__(self, options):
         self.options = options
         #self.rpc_client = rpc_client.EngineClient()
+        self.context = context.get_admin_context()
 
     def default(self, req, **args):
+        print ('99999999999999999999999999999999999999')
+        raise KnobException('Not Found')
         raise exc.HTTPNotFound()
 
     def index(self, req):
@@ -42,8 +47,9 @@ class GateController(object):
         params = util.get_allowed_params(req.params, whitelist)
         sds = self.rpc_client.list_software_deployments(req.context, **params)
         """
-        sds = 1
-        return {'software_deployments': sds}
+        print ('############################################')
+        nets = self.context.neutron_client.list_networks()
+        return {'networks': nets}
 
     def show(self, req, deployment_id):
         """Gets detailed information for a SSH gate."""

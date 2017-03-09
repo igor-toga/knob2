@@ -182,6 +182,7 @@ function configure_knob {
 
     #cp -p $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR
     cp $KNOB_DIR/etc/knob/api-paste.ini $KNOB_CONF_DIR/api-paste.ini
+    cp $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR/policy.json
 
     rm -f $KNOB_CONF
 

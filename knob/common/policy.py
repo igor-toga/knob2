@@ -15,7 +15,7 @@
 #    under the License.
 
 # Based on glance/api/policy.py
-"""Policy Engine For Heat."""
+"""Policy Engine For Knob."""
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -35,7 +35,7 @@ DEFAULT_RESOURCE_RULES = policy.Rules.from_dict({'default': '@'})
 class Enforcer(object):
     """Responsible for loading and enforcing rules."""
 
-    def __init__(self, scope='heat', exc=exception.Forbidden,
+    def __init__(self, scope='knob', exc=exception.Forbidden,
                  default_rule=DEFAULT_RULES['default'], policy_file=None):
         self.scope = scope
         self.exc = exc
@@ -55,10 +55,10 @@ class Enforcer(object):
     def _check(self, context, rule, target, exc, *args, **kwargs):
         """Verifies that the action is valid on the target in this context.
 
-           :param context: Heat request context
+           :param context: Knob request context
            :param rule: String representing the action to be checked
            :param target: Dictionary representing the object of the action.
-           :raises: self.exc (defaults to heat.common.exception.Forbidden)
+           :raises: self.exc (defaults to knob.common.exception.Forbidden)
            :returns: A non-False value if access is allowed.
         """
         do_raise = False if not exc else True
@@ -69,10 +69,10 @@ class Enforcer(object):
     def enforce(self, context, action, scope=None, target=None):
         """Verifies that the action is valid on the target in this context.
 
-           :param context: Heat request context
+           :param context: Knob request context
            :param action: String representing the action to be checked
            :param target: Dictionary representing the object of the action.
-           :raises: self.exc (defaults to heat.common.exception.Forbidden)
+           :raises: self.exc (defaults to knob.common.exception.Forbidden)
            :returns: A non-False value if access is allowed.
         """
         _action = '%s:%s' % (scope or self.scope, action)
@@ -82,7 +82,7 @@ class Enforcer(object):
     def check_is_admin(self, context):
         """Whether or not roles contains 'admin' role according to policy.json.
 
-           :param context: Heat request context
+           :param context: Knob request context
            :returns: A non-False value if the user is admin according to policy
         """
         return self._check(context, 'context_is_admin', target={}, exc=None)

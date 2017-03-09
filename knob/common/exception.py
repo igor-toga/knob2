@@ -49,7 +49,7 @@ CONF.register_opts(exc_log_opts)
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):
-    def __init__(self, code=500, title="", explanation=""):
+    def __init__(self, code=510, title="", explanation=""):
         self.code = code
         # There is a strict rule about constructing status line for HTTP:
         # '...Status-Line, consisting of the protocol version followed by a
@@ -83,7 +83,7 @@ class KnobException(Exception):
 
     """
     message = _("An unknown exception occurred.")
-    code = 500
+    code = 505
     headers = {}
     safe = False
 
@@ -236,3 +236,22 @@ class Forbidden(KnobException):
 
 class AuthorizationFailure(KnobException):
     msg_fmt = _("Authorization failed.")
+
+
+class ResourceUnknownStatus(KnobException):
+    msg_fmt = _('%(result)s - Unknown status %(resource_status)s due to '
+                '"%(status_reason)s"')
+
+    def __init__(self, result=_('Resource failed'),
+                 status_reason=_('Unknown'), **kwargs):
+        super(ResourceUnknownStatus, self).__init__(
+            result=result, status_reason=status_reason, **kwargs)
+
+
+class ResourceInError(KnobException):
+    msg_fmt = _('Went to status %(resource_status)s '
+                'due to "%(status_reason)s"')
+
+    def __init__(self, status_reason=_('Unknown'), **kwargs):
+        super(ResourceInError, self).__init__(status_reason=status_reason,
+                                              **kwargs)

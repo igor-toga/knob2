@@ -27,6 +27,7 @@ from knob.api.middleware import fault
 from knob.api.middleware import ssl
 from knob.api.middleware import version_negotiation as vn
 from knob.api import versions
+from knob.common.exception import KnobException
 
 
 def version_negotiation_filter(app, conf, **local_conf):
@@ -103,7 +104,7 @@ class API(wsgi.Router):
         # Gates
         gate_resource = gates.create_resource(conf)
         connect(controller=gate_resource,
-                path_prefix='/{tenant_id}/gates',
+                path_prefix='/gates',
                 routes=[
                     {
                         'name': 'gate_index',
@@ -134,7 +135,7 @@ class API(wsgi.Router):
         # Targets
         target_resource = targets.create_resource(conf)
         connect(controller=target_resource,
-                path_prefix='/{tenant_id}/targets',
+                path_prefix='/targets',
                 routes=[
                     {
                         'name': 'target_index',
@@ -165,7 +166,7 @@ class API(wsgi.Router):
         # Associates
         associate_resource = associates.create_resource(conf)
         connect(controller=associate_resource,
-                path_prefix='/{tenant_id}/associates',
+                path_prefix='/associates',
                 routes=[
                     {
                         'name': 'associate_index',
@@ -197,7 +198,7 @@ class API(wsgi.Router):
         service_resource = services.create_resource(conf)
         with mapper.submapper(
             controller=service_resource,
-            path_prefix='/{tenant_id}/services'
+            path_prefix='/services'
         ) as sa_mapper:
 
             sa_mapper.connect("service_index",

@@ -32,8 +32,9 @@ from knob.common.i18n import _LE
 from knob.common import policy
 from knob.common import wsgi
 from knob.db.sqlalchemy import api as db_api
-# TODO: uncomment this later
-#from knob.engine import clients
+from knob.clients import neutron
+from knob.clients import barbican
+from knob.clients import nova
 
 LOG = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class RequestContext(context.RequestContext):
     additional request information.
     """
 
-    def __init__(self, username=None, password=None, aws_creds=None,
+    def __init__(self, username=None, password=None,
                  auth_url=None, roles=None, is_admin=None, read_only=False,
                  show_deleted=False, overwrite=True, trust_id=None,
                  trustor_user_id=None, request_id=None, auth_token_info=None,
@@ -106,12 +107,13 @@ class RequestContext(context.RequestContext):
         self.username = username
         self.password = password
         self.region_name = region_name
-        self.aws_creds = aws_creds
         self.project_name = project_name
         self.auth_token_info = auth_token_info
         self.auth_url = auth_url
         self._session = None
-        self._clients = None
+        self._neutron_client = None
+        self._barbican_client = None
+        self._nova_client = None
         self._keystone_session = session.Session(
             **config.get_ssl_options('keystone'))
         self.trust_id = trust_id
@@ -154,10 +156,22 @@ class RequestContext(context.RequestContext):
         return self._keystone_session
 
     @property
-    def clients(self):
-        if self._clients is None:
-            self._clients = clients.Clients(self)
-        return self._clients
+    def neutron_client(self):
+        if self._neutron_client is None:
+            self._neutron_client = neutron.NeutronClient(self._keystone_session)
+        return self._neutron_client
+    
+    @property
+    def barbican_client(self):
+        if self._barbican_client is None:
+            self._barbican_client = barbican.BarbicanClient(self._keystone_session)
+        return self._barbican_client
+    
+    @property
+    def nova_client(self):
+        if self._nova_client is None:
+            self._nova_client = nova.nova_client(self._keystone_session)
+        return self._nova_client
 
     def auth_needs_refresh(self):
         auth_ref = self.auth_plugin.get_auth_ref(self._keystone_session)
@@ -173,11 +187,10 @@ class RequestContext(context.RequestContext):
                 'username': self.username,
                 'user_id': self.user_id,
                 'password': self.password,
-                'aws_creds': self.aws_creds,
                 'tenant': self.project_name,
                 'tenant_id': self.tenant_id,
-                'trust_id': self.trust_id,
-                'trustor_user_id': self.trustor_user_id,
+                #'trust_id': self.trust_id,
+                #'trustor_user_id': self.trustor_user_id,
                 'auth_token_info': self.auth_token_info,
                 'auth_url': self.auth_url,
                 'roles': self.roles,
@@ -197,7 +210,6 @@ class RequestContext(context.RequestContext):
             username=values.get('username'),
             user=values.get('user_id'),
             password=values.get('password'),
-            aws_creds=values.get('aws_creds'),
             project_name=values.get('tenant'),
             tenant=values.get('tenant_id'),
             trust_id=values.get('trust_id'),
@@ -360,13 +372,10 @@ class ContextMiddleware(wsgi.Middleware):
 
         username = None
         password = None
-        aws_creds = None
 
         if headers.get('X-Auth-User') is not None:
             username = headers.get('X-Auth-User')
             password = headers.get('X-Auth-Key')
-        elif headers.get('X-Auth-EC2-Creds') is not None:
-            aws_creds = headers.get('X-Auth-EC2-Creds')
 
         project_name = headers.get('X-Project-Name')
         region_name = headers.get('X-Region-Name')
@@ -379,7 +388,6 @@ class ContextMiddleware(wsgi.Middleware):
         req.context = self.ctxcls.from_environ(
             environ,
             project_name=project_name,
-            aws_creds=aws_creds,
             username=username,
             password=password,
             auth_url=auth_url,
