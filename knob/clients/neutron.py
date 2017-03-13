@@ -12,8 +12,9 @@
 #    under the License.
 
 from neutronclient.common import exceptions
-from neutronclient.neutron import v2_0 as neutronV20
-from neutronclient.v2_0 import client as neutron_client
+#from neutronclient.neutron import v2_0 as neutronV20
+#from neutronclient.v2_0 import client as neutron_client
+from neutronclient.neutron import client as neutron_client
 from oslo_utils import uuidutils
 
 from knob.common import exception
@@ -22,17 +23,17 @@ from knob.common import exception
 class NeutronClient(object):
 
 
-    def __init__(self, sess):
-        self._client = neutron_client.Client('2.0', session=sess)
+    def __init__(self, session):
+        self._client = neutron_client.Client('2.0', session=session)
     
     def client(self):
         if self._client is None:
-            raise exception.NotFound('obejct not found')
+            raise exception.NotFound('neutronclient object not found')
         return self._client
 
     # sample code
     def list_networks(self):
-        self.client().list_networks()
+        return self.client().list_networks()
         
     def is_not_found(self, ex):
         if isinstance(ex, (exceptions.NotFound,

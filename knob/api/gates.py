@@ -31,12 +31,7 @@ class GateController(object):
     def __init__(self, options):
         self.options = options
         #self.rpc_client = rpc_client.EngineClient()
-        self.context = context.get_admin_context()
 
-    def default(self, req, **args):
-        print ('99999999999999999999999999999999999999')
-        raise KnobException('Not Found')
-        raise exc.HTTPNotFound()
 
     def index(self, req):
         """List SSH gates."""
@@ -47,9 +42,15 @@ class GateController(object):
         params = util.get_allowed_params(req.params, whitelist)
         sds = self.rpc_client.list_software_deployments(req.context, **params)
         """
-        print ('############################################')
-        nets = self.context.neutron_client.list_networks()
-        return {'networks': nets}
+        print ('gate list method get called')
+        # TODO howto pass internalURL
+
+        #self.context = context.get_admin_context()
+        ctx = req.context        
+        nets = ctx.neutron_client.list_networks()
+        
+        # replace key to the key client expects to see
+        return {'gates': nets['networks']}
 
     def show(self, req, deployment_id):
         """Gets detailed information for a SSH gate."""

@@ -38,6 +38,7 @@ class JSONResponseSerializer(object):
 
         response = jsonutils.dumps(data, default=sanitizer)
         LOG.debug("JSON response : %s" % response)
+        print ("Serializer repsonse -------------------------------__> %s " % response)
         return response
 
     def default(self, response, result):

@@ -230,7 +230,7 @@ function start_knob {
     local service_port=$KNOB_SERVICE_PORT
     local service_protocol=$SERVICE_PROTOCOL
 
-    run_process_knob k-ssh "$KNOB_BIN_DIR/knob-ssh --config-file $KNOB_CONF"
+    run_process_knob k-api "$KNOB_BIN_DIR/knob-api --config-file $KNOB_CONF"
     #echo "Waiting for Knob API to start..."
     #if ! wait_for_service $SERVICE_TIMEOUT $service_protocol://$SERVICE_HOST:$service_port; then
     #    die $LINENO "k-shh did not start"
@@ -239,7 +239,7 @@ function start_knob {
 
 # stop_knob() - Stop running processes
 function stop_knob {
-    stop_process_knob k-ssh
+    stop_process_knob k-api
 }
 
 
