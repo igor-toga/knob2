@@ -58,6 +58,7 @@ class GateController(object):
         sd = 1 
         return {'software_deployment': sd}
 
+    #def create(self, req, body):
     def create(self, req, body):
         """Create a new SSH gate."""
         """
@@ -68,7 +69,11 @@ class GateController(object):
         sd = self.rpc_client.create_software_deployment(req.context,
                                                         **create_data)
         """
-        raise KnobException('sssssssssssssssssssssssssssssssssssss - create')
+        
+        print (req)
+        #create_data = dict((k, req.body.get(k)) for k in ('name'))
+        #print (create_data)
+        
         ctx = req.context        
         nets = ctx.neutron_client.list_networks()
         print (nets)

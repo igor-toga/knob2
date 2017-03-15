@@ -80,6 +80,7 @@ class API(wsgi.Router):
                     urls[url] = methods
                 else:
                     urls[url] += methods
+            print (urls)
 
             # now register the missing methods to return 405s, and register
             # a handler for OPTIONS that returns the list of allowed methods
@@ -92,6 +93,7 @@ class API(wsgi.Router):
                                action='reject',
                                allowed_methods=allowed_methods_str,
                                conditions={'method': missing_methods})
+                print('reject %(url)s , %(missing)s' % {'url':url, 'missing':missing_methods})
                 if 'OPTIONS' not in methods:
                     mapper.connect(url,
                                    controller=default_resource,
@@ -198,7 +200,7 @@ class API(wsgi.Router):
         service_resource = services.create_resource(conf)
         with mapper.submapper(
             controller=service_resource,
-            path_prefix='/services'
+            path_prefix='/ssh_services'
         ) as sa_mapper:
 
             sa_mapper.connect("service_index",
