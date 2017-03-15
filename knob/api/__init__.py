@@ -107,12 +107,6 @@ class API(wsgi.Router):
                 path_prefix='/gates',
                 routes=[
                     {
-                        'name': 'gate_index',
-                        'url': '',
-                        'action': 'index',
-                        'method': 'GET'
-                    },
-                    {
                         'name': 'gate_create',
                         'url': '',
                         'action': 'create',
@@ -129,7 +123,13 @@ class API(wsgi.Router):
                         'url': '/{gate_id}',
                         'action': 'delete',
                         'method': 'DELETE'
-                    }
+                    },
+                    {
+                        'name': 'gate_index',
+                        'url': '',
+                        'action': 'index',
+                        'method': 'GET'
+                    },
                 ])
 
         # Targets

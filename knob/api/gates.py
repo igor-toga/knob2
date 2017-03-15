@@ -13,8 +13,6 @@
 
 from webob import exc
 
-#from knob.api.openstack.v1 import util
-from knob.common import context
 from knob.common import serializers
 from knob.common import wsgi
 from knob.common.exception import KnobException
@@ -45,17 +43,18 @@ class GateController(object):
         print ('gate list method get called')
         # TODO howto pass internalURL
 
-        #self.context = context.get_admin_context()
+        #myctx #= context.get_admin_context()
         ctx = req.context        
         nets = ctx.neutron_client.list_networks()
         
         # replace key to the key client expects to see
         return {'gates': nets['networks']}
 
-    def show(self, req, deployment_id):
+    def show(self, req, gate_id):
         """Gets detailed information for a SSH gate."""
         #sd = self.rpc_client.show_software_deployment(req.context,
-        #                                              deployment_id)
+        #   
+        raise KnobException('sssssssssssssssssssssssssssssssssssss - show')
         sd = 1 
         return {'software_deployment': sd}
 
@@ -69,14 +68,17 @@ class GateController(object):
         sd = self.rpc_client.create_software_deployment(req.context,
                                                         **create_data)
         """
-        sd = 1
-        return {'software_deployment': sd}
+        raise KnobException('sssssssssssssssssssssssssssssssssssss - create')
+        ctx = req.context        
+        nets = ctx.neutron_client.list_networks()
+        print (nets)
+        return {'gates': nets['networks']}
 
-    def delete(self, req, deployment_id):
+    def delete(self, req, gate_id):
         """Delete an existing SSH gate."""
         #res = self.rpc_client.delete_software_deployment(req.context,
         #                                                 deployment_id)
-
+        raise KnobException('sssssssssssssssssssssssssssssssssssss - delete')
         res = 1
         if res is not None:
             raise exc.HTTPBadRequest(res['Error'])

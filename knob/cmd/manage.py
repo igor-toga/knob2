@@ -20,6 +20,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log
 
+from knob.common import config
 from knob.common import context
 from knob.common.i18n import _
 #from knob.common import messaging
@@ -130,10 +131,11 @@ def main():
     log.setup(CONF, "knob-manage")
     CONF.register_cli_opt(command_opt)
     try:
-        default_config_files = cfg.find_config_files('knob', 'knob-engine')
+        default_config_files = cfg.find_config_files('knob', 'knob-manage')
         CONF(sys.argv[1:], project='knob', prog='knob-manage',
              version=version.version_info.version_string(),
              default_config_files=default_config_files)
+        config.set_config_defaults()
     except RuntimeError as e:
         sys.exit("ERROR: %s" % e)
 

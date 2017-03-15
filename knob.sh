@@ -50,8 +50,8 @@ configure_knob
 #source $TOP_DIR/userrc_early
 #create_knob_accounts
 
-#echo " ---> Init knob"
-#init_knob
+echo " ---> Init knob"
+init_knob
 
 echo " ---> Start Knob service ..."
 start_knob

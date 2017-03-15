@@ -16,6 +16,7 @@ from webob import exc
 #from knob.api.openstack.v1 import util
 from knob.common import serializers
 from knob.common import wsgi
+from knob.common import exception
 
 
 class TargetController(object):
@@ -30,8 +31,6 @@ class TargetController(object):
         self.options = options
         #self.rpc_client = rpc_client.EngineClient()
 
-    def default(self, req, **args):
-        raise exc.HTTPNotFound()
 
     def index(self, req):
         """List SSH gates."""
@@ -43,9 +42,10 @@ class TargetController(object):
         sds = self.rpc_client.list_software_deployments(req.context, **params)
         """
         sds = 1
+        raise exception.KnobException('---------------<<<<<<<<<>>>>>>>>>>>>>------')
         return {'software_deployments': sds}
 
-    def show(self, req, deployment_id):
+    def show(self, req, target_id):
         """Gets detailed information for a SSH gate."""
         #sd = self.rpc_client.show_software_deployment(req.context,
         #                                              deployment_id)
@@ -65,7 +65,7 @@ class TargetController(object):
         sd = 1
         return {'software_deployment': sd}
 
-    def delete(self, req, deployment_id):
+    def delete(self, req, target_id):
         """Delete an existing SSH gate."""
         #res = self.rpc_client.delete_software_deployment(req.context,
         #                                                 deployment_id)

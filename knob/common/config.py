@@ -403,21 +403,20 @@ def list_opts():
     yield auth_password_group.name, auth_password_opts
     yield revision_group.name, revision_opts
     yield volumes_group.name, volumes_opts
-    yield profiler.list_opts()[0]
+    #yield profiler.list_opts()[0]
     yield 'clients', default_clients_opts
 
-    for client in ('aodh', 'barbican', 'ceilometer', 'cinder', 'designate',
-                   'glance', 'knob', 'keystone', 'magnum', 'manila', 'mistral',
-                   'monasca', 'neutron', 'nova', 'sahara', 'senlin', 'swift',
-                   'trove', 'zaqar'
-                   ):
+    for client in ('barbican', 
+                   'glance', 'knob', 'keystone', 
+                   'neutron', 'nova'):
         client_specific_group = 'clients_' + client
         yield client_specific_group, clients_opts
 
     yield 'clients_knob', knob_client_opts
     yield 'clients_keystone', keystone_client_opts
-    yield 'clients_nova', client_http_log_debug_opts
-    yield 'clients_cinder', client_http_log_debug_opts
+    #yield 'clients_nova', client_http_log_debug_opts
+    #yield 'clients_neutron', client_http_log_debug_opts
+    #yield 'clients_barbican', client_http_log_debug_opts
 
 
 cfg.CONF.register_group(paste_deploy_group)

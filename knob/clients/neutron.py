@@ -24,6 +24,7 @@ class NeutronClient(object):
 
 
     def __init__(self, session):
+        print (session)
         self._client = neutron_client.Client('2.0', session=session)
     
     def client(self):
