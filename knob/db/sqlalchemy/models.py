@@ -55,7 +55,7 @@ class Service(BASE, KnobBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, nullable=False)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     binary = Column(String(255))
     topic = Column(String(255))
@@ -66,8 +66,11 @@ class Gate(BASE, KnobBase):
     """Represents a Ssh gates (bastion VM hosts)"""
 
     __tablename__ = 'gates'
-    id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String(255), nullable=False)  # , ForeignKey('hosts.id'))
+    fip_id = Column(String(36), nullable=False)
+    server_id = Column(String(36), nullable=False)
+    tenant_id = Column(String(36))
 
     
 class Associate(BASE, KnobBase):

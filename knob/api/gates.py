@@ -10,13 +10,15 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+from oslo_log import log as logging
 from webob import exc
 
 from knob.common import serializers
 from knob.common import wsgi
 from knob.common.exception import KnobException
+from knob.objects import gate as obj
 
+LOG = logging.getLogger(__name__)
 
 class GateController(object):
     """WSGI controller for SSH gates in Knob v1 API.
@@ -54,37 +56,71 @@ class GateController(object):
         """Gets detailed information for a SSH gate."""
         #sd = self.rpc_client.show_software_deployment(req.context,
         #   
-        raise KnobException('sssssssssssssssssssssssssssssssssssss - show')
+        print ('------------in show ---------------------- %s ' % gate_id)
         sd = 1 
         return {'software_deployment': sd}
 
     #def create(self, req, body):
     def create(self, req, body):
         """Create a new SSH gate."""
-        """
+        
+        print ('------------in create ---------------------- ')
         create_data = dict((k, body.get(k)) for k in (
-            'config_id', 'server_id', 'input_values',
-            'action', 'status', 'status_reason', 'stack_user_project_id'))
+            'name', 'net_id', 'public_net_id','key'))
+        create_data['flavor'] = 'm1.tiny'
+        create_data['image'] = 'cirros-0.3.5-x86_64-disk'
+        create_data['security_groups'] = 'default'
+        
+        ctx = req.context
+        
+        if 'public_net_id' not in create_data:
+            raise exc.HTTPBadRequest('Not supplied required parameter')
  
-        sd = self.rpc_client.create_software_deployment(req.context,
-                                                        **create_data)
         """
+         create neutron port first
+         create service VM with provided parameters and given port
+         create floating ip
+         attach VM port to floating ip
+        """
+        port_id = 'e89f6467-00b7-42a3-8b03-8107bd5f428c'
+        #port_id = ctx.neutron_client.create_port(create_data)
         
-        print (req)
-        #create_data = dict((k, req.body.get(k)) for k in ('name'))
-        #print (create_data)
+        create_data['port-id'] = port_id
+        # update network configuration with given port id
+        #vm_id = ctx.nova_client.create_service_vm(create_data)
+        # create fip and to attach to given port
         
-        ctx = req.context        
-        nets = ctx.neutron_client.list_networks()
-        print (nets)
-        return {'gates': nets['networks']}
+        #fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
+        vm_id = '74dcc644-527b-4f77-839f-70463126f0f1'
+        fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
 
+        # DB update 
+        gate_ref = obj.Gate.create(
+                ctx,dict(name=create_data['name'],
+                             server_id=vm_id,
+                             fip_id=fip_id,
+                             tenant_id=''))
+        
+        gate_id = gate_ref['id']
+        LOG.debug('Gate %s is create successfully' % gate_id)
+        return gate_id
+
+    
     def delete(self, req, gate_id):
         """Delete an existing SSH gate."""
-        #res = self.rpc_client.delete_software_deployment(req.context,
-        #                                                 deployment_id)
-        raise KnobException('sssssssssssssssssssssssssssssssssssss - delete')
-        res = 1
+        
+        print ('------------in delete ---------------------- %s ' % gate_id)
+        ctx = req.context
+        # lookup correct gate by id
+        gate_ref = obj.Gate.get_by_id(ctx, gate_id)
+        vm_id = gate_ref['vm_id']
+        fip_id = gate_ref['fip_id']
+        ctx.neutron_client.disassociate_fip(fip_id)
+        ctx.nova_client.remove_service_vm(vm_id)
+        
+        obj.Gate.delete(ctx,gate_id)
+        
+        res = None
         if res is not None:
             raise exc.HTTPBadRequest(res['Error'])
 

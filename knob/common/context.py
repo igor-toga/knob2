@@ -104,7 +104,7 @@ class RequestContext(context.RequestContext):
     @property
     def nova_client(self):
         if self._nova_client is None:
-            self._nova_client = nova.nova_client(self._keystone_session)
+            self._nova_client = nova.NovaClient(self._keystone_session)
         return self._nova_client
 
 

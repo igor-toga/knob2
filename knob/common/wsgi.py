@@ -758,7 +758,6 @@ class Resource(object):
     
             LOG.debug(('Calling %(controller)s : %(action)s'),
                       {'controller': self.controller, 'action': action})
-    
             action_result = self.dispatch(self.controller, action,
                                           request, **action_args)
         except TypeError as err:

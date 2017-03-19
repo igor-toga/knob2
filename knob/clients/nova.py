@@ -68,6 +68,61 @@ class NovaClient(object):
             raise exception.NotFound('nova object not found')
         return self._client
 
+    def create_service_vm(self, data):
+        #nics = [{"net-id": net_id, "v4-fixed-ip": ''}]
+        
+        client = self.client()  
+        # verify keypair
+        key=data['key']
+        if client.keypairs.get(key) is None:
+            LOG.warning(_LW('Provided key with name (%(name)s)'), 
+                        {'name': key})
+            return None
+        
+        image = client.images.find(name=data['image'])
+        flavor = client.flavors.find(name=data['flavor'])
+        server_ref = None
+        try:
+            nics = [{'port-id': data['port-id']}]
+            server_ref = client.servers.create(
+                name=data['name'], 
+                image=image, 
+                flavor=flavor, 
+                nics=nics,
+                security_groups=[data['security_groups']], 
+                key_name=key)
+            print ('returned: %s' % server_ref)
+        finally:
+            if server_ref is not None:
+                server_id = server_ref.id
+        
+        try:
+            print ('server_id: %s' % server_id)
+            # wait till server is ready
+            self._check_active(server_id)
+            
+        except exception.ResourceInError as ex:
+            LOG.warning(_LW('Instance (%(server)s) not found: %(ex)s'),
+                        {'server': server_id, 'ex': ex})
+        except exception.ResourceUnknownStatus as ex:
+            LOG.warning(_LW('Instance (%(server)s) bad status while creating: %(ex)s'),
+                        {'server': server_id, 'ex': ex})
+        
+        print('service is up')
+        return server_id
+    
+    def remove_service_vm(self, server_id):
+        self.client().servers.delete(server_id)
+        
+        try:
+            # wait till server is down
+            self.check_delete_server_complete(server_id)
+        except exception.ServiceNotFound as ex:
+            LOG.warning(_LW('Instance (%(server)s) bad status while deleting: %(ex)s'),
+                        {'server': server_id, 'ex': ex})
+        return
+    
+    #--------------------------------------------------------------
     def is_not_found(self, ex):
         return isinstance(ex, exceptions.NotFound)
 
@@ -125,30 +180,6 @@ class NovaClient(object):
                 raise
         return server
 
-    def refresh_server(self, server):
-        """Refresh server's attributes.
-
-        Also log warnings for non-critical API errors.
-        """
-        try:
-            server.get()
-        except exceptions.OverLimit as exc:
-            LOG.warning(_LW("Server %(name)s (%(id)s) received an OverLimit "
-                            "response during server.get(): %(exception)s"),
-                        {'name': server.name,
-                         'id': server.id,
-                         'exception': exc})
-        except exceptions.ClientException as exc:
-            if ((getattr(exc, 'http_status', getattr(exc, 'code', None)) in
-                 (500, 503))):
-                LOG.warning(_LW('Server "%(name)s" (%(id)s) received the '
-                                'following exception during server.get(): '
-                                '%(exception)s'),
-                            {'name': server.name,
-                             'id': server.id,
-                             'exception': exc})
-            else:
-                raise
 
     def get_ip(self, server, net_type, ip_version):
         """Return the server's IP of the given type and version."""
@@ -166,6 +197,9 @@ class NovaClient(object):
         # Some clouds append extra (STATUS) strings to the status, strip it
         return server.status.split('(')[0]
 
+    @retry(stop_max_attempt_number=cfg.CONF.max_interface_check_attempts,
+           wait_fixed=500,
+           retry_on_result=retry_if_result_is_false)
     def _check_active(self, server, res_name='Server'):
         """Check server status.
 
@@ -261,7 +295,9 @@ class NovaClient(object):
         except exceptions.NotFound:
             raise exception.EntityNotFound(entity='Key', name=key_name)
 
-
+    @retry(stop_max_attempt_number=cfg.CONF.max_interface_check_attempts,
+           wait_fixed=500,
+           retry_on_result=retry_if_result_is_false)
     def check_delete_server_complete(self, server_id):
         """Wait for server to disappear from Nova."""
         try:
@@ -314,41 +350,6 @@ class NovaClient(object):
         limits = self.client().limits.get()
         return dict([(limit.name, limit.value)
                     for limit in list(limits.absolute)])
-
-    def get_console_urls(self, server):
-        """Return dict-like structure of server's console urls.
-
-        The actual console url is lazily resolved on access.
-        """
-
-        class ConsoleUrls(collections.Mapping):
-            def __init__(self, server):
-                self.console_methods = {
-                    'novnc': server.get_vnc_console,
-                    'xvpvnc': server.get_vnc_console,
-                    'spice-html5': server.get_spice_console,
-                    'rdp-html5': server.get_rdp_console,
-                    'serial': server.get_serial_console
-                }
-
-            def __getitem__(self, key):
-                try:
-                    url = self.console_methods[key](key)['console']['url']
-                except exceptions.BadRequest as e:
-                    unavailable = 'Unavailable console type'
-                    if unavailable in e.message:
-                        url = e.message
-                    else:
-                        raise
-                return url
-
-            def __len__(self):
-                return len(self.console_methods)
-
-            def __iter__(self):
-                return (key for key in self.console_methods)
-
-        return ConsoleUrls(server)
 
 
     def interface_detach(self, server_id, port_id):

@@ -32,14 +32,17 @@ def define_tables(meta):
 
         mysql_engine='InnoDB'
     )
-    delegates = Table(
-        'delegates', meta,
+    gates = Table(
+        'gates', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('host', String(length=255)),
+        Column('name', String(length=255), nullable=False),
+        Column('fip_id', String(length=36), nullable=False),
+        Column('server_id', String(length=36), nullable=False),
+        Column('tenant_id', String(length=36)),
         mysql_engine='InnoDB'
         )
     targets = Table(
@@ -64,7 +67,7 @@ def define_tables(meta):
         )
 
     return [services,
-            delegates,
+            gates,
             targets,
             associates
             ]
@@ -83,7 +86,7 @@ def upgrade(migrate_engine):
 
     if migrate_engine.name == "mysql":
         tables = ["services",
-                  "delegates",
+                  "gates",
                   "targets",
                   "associates",
                   ]

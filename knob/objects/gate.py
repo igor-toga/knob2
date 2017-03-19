@@ -29,14 +29,13 @@ class Gate(
 ):
     fields = {
         'id': fields.StringField(),
-        'config_id': fields.StringField(),
+        'name': fields.StringField(),
+        'fip_id': fields.StringField(),
         'server_id': fields.StringField(),
-        'tenant': fields.StringField(),
-        'action': fields.StringField(nullable=True),
-        'status': fields.StringField(nullable=True),
-        'status_reason': fields.StringField(nullable=True),
+        'tenant_id': fields.StringField(),
         'created_at': fields.DateTimeField(read_only=True),
         'updated_at': fields.DateTimeField(nullable=True),
+        'deleted_at': fields.DateTimeField(nullable=True),
     }
 
     @staticmethod
@@ -53,10 +52,10 @@ class Gate(
             context, cls(), db_api.gate_create(context, values))
 
     @classmethod
-    def get_by_id(cls, context, deployment_id):
+    def get_by_id(cls, context, gate_id):
         return cls._from_db_object(
             context, cls(),
-            db_api.gate_get(context, deployment_id))
+            db_api.gate_get(context, gate_id))
 
     @classmethod
     def get_all(cls, context, server_id=None):
@@ -65,15 +64,15 @@ class Gate(
                     context, server_id)]
 
     @classmethod
-    def update_by_id(cls, context, deployment_id, values):
+    def update_by_id(cls, context, gate_id, values):
         """Note this is a bit unusual as it returns the object.
 
         Other update_by_id methods return a bool (was it updated).
         """
         return cls._from_db_object(
             context, cls(),
-            db_api.gate_update(context, deployment_id, values))
+            db_api.gate_update(context, gate_id, values))
 
     @classmethod
-    def delete(cls, context, deployment_id):
-        db_api.gate_delete(context, deployment_id)
+    def delete(cls, context, gate_id):
+        db_api.gate_delete(context, gate_id)

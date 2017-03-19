@@ -24,7 +24,6 @@ class NeutronClient(object):
 
 
     def __init__(self, session):
-        print (session)
         self._client = neutron_client.Client('2.0', session=session)
     
     def client(self):
@@ -36,6 +35,40 @@ class NeutronClient(object):
     def list_networks(self):
         return self.client().list_networks()
         
+    def get_port_id(self, vm_id):
+        """extract port id according to vm id """
+        port_id = None
+        return port_id
+    
+    def associate_fip(self, port_id, public_net_id):
+        """create fip and associate with given port_id """
+        request = {'floatingip': 
+                   {'floating_network_id': public_net_id,
+                    'port_id': port_id}
+                   }
+        response = self.client().create_floatingip(request)
+        fip_id = response['floatingip']['id']
+        return fip_id
+    
+    def disassociate_fip(self, fip_id):
+        """disassociate fip and associate with given port_id """
+        fip_id = None
+    
+    def create_port(self, create_data):
+        print ('netinfo:')
+        print (create_data)
+        request = {'port':
+           {
+            'network_id': create_data['net_id'],
+            'name': 'knob-service-port',
+            'admin_state_up': True,
+            #'security_groups': create_data['security_groups']
+            }
+           }
+        response = self.client().create_port(request)
+        port_id = response['port']['id']
+        return port_id
+    #---------------------------------------------------------
     def is_not_found(self, ex):
         if isinstance(ex, (exceptions.NotFound,
                            exceptions.NetworkNotFoundClient,
@@ -150,37 +183,3 @@ class NeutronClient(object):
                         raise exception.PhysicalResourceNameAmbiguity(name=sg)
         return seclist
 
-    def _resove_resource_path(self, resource):
-        """Returns sfc resource path."""
-
-        if resource == 'port_pair':
-            RESOURCE_PATH = "/sfc/port_pairs"
-            return RESOURCE_PATH
-
-    def create_sfc_resource(self, resource, props):
-        """Returns created sfc resource record."""
-
-        path = self._resove_resource_path(resource)
-        record = self.client().create_ext(path, {resource: props}
-                                          ).get(resource)
-        return record
-
-    def update_sfc_resource(self, resource, prop_diff, resource_id):
-        """Returns updated sfc resource record."""
-
-        path = self._resove_resource_path(resource)
-        return self.client().update_ext(path + '/%s', self.resource_id,
-                                        {resource: prop_diff})
-
-    def delete_sfc_resource(self, resource, resource_id):
-        """deletes sfc resource record and returns status"""
-
-        path = self._resove_resource_path(resource)
-        return self.client().delete_ext(path + '/%s', self.resource_id)
-
-    def show_sfc_resource(self, resource, resource_id):
-        """returns specific sfc resource record"""
-
-        path = self._resove_resource_path(resource)
-        return self.client().show_ext(path + '/%s', self.resource_id
-                                      ).get(resource)
