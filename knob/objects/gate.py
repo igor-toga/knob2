@@ -56,6 +56,12 @@ class Gate(
         return cls._from_db_object(
             context, cls(),
             db_api.gate_get(context, gate_id))
+        
+    @classmethod
+    def get_by_name(cls, context, gate_name):
+        return cls._from_db_object(
+            context, cls(),
+            db_api.gate_get_by_name(context, gate_name))
 
     @classmethod
     def get_all(cls, context, server_id=None):

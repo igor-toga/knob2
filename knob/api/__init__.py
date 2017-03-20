@@ -116,13 +116,13 @@ class API(wsgi.Router):
                     },
                     {
                         'name': 'gate_show',
-                        'url': '/{gate_id}',
+                        'url': '/{gate_name}',
                         'action': 'show',
                         'method': 'GET'
                     },
                     {
                         'name': 'gate_delete',
-                        'url': '/{gate_id}',
+                        'url': '/{gate_name}',
                         'action': 'delete',
                         'method': 'DELETE'
                     },

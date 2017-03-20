@@ -19,6 +19,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+from oslo_utils import excutils
 from retrying import retry
 import six
 from six.moves.urllib import parse as urlparse
@@ -120,20 +121,25 @@ class NovaClient(object):
         except exception.ServiceNotFound as ex:
             LOG.warning(_LW('Instance (%(server)s) bad status while deleting: %(ex)s'),
                         {'server': server_id, 'ex': ex})
+        print('successfully removed VM with server_id: %s' % server_id)
         return
     
     #--------------------------------------------------------------
     def is_not_found(self, ex):
         return isinstance(ex, exceptions.NotFound)
 
-    def is_over_limit(self, ex):
-        return isinstance(ex, exceptions.OverLimit)
-
-    def is_bad_request(self, ex):
-        return isinstance(ex, exceptions.BadRequest)
-
     def is_conflict(self, ex):
         return isinstance(ex, exceptions.Conflict)
+    
+    @excutils.exception_filter
+    def ignore_not_found(self, ex):
+        """Raises the exception unless it is a not-found."""
+        return self.is_not_found(ex)
+
+    @excutils.exception_filter
+    def ignore_conflict_and_not_found(self, ex):
+        """Raises the exception unless it is a conflict or not-found."""
+        return self.is_conflict(ex) or self.is_not_found(ex)
 
     def is_unprocessable_entity(self, ex):
         http_status = (getattr(ex, 'http_status', None) or

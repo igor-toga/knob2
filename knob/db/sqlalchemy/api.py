@@ -108,30 +108,23 @@ def gate_create(context, values):
     return obj_ref
 
 
-def gate_get(context, deployment_id):
+def gate_get(context, gate_id):
     result = context.session.query(
-        models.Gate).get(deployment_id)
-    if (result is not None and context is not None and
-        context.tenant_id not in (result.tenant,
-                                  result.stack_user_project_id)):
-        result = None
+        models.Gate).get(gate_id)
 
     if not result:
-        raise exception.NotFound(_('Deployment with id %s not found') %
-                                 deployment_id)
+        raise exception.NotFound(_('Gate with id %s not found') %
+                                 gate_id)
     return result
 
-
-def gate_get_all(context, server_id=None):
-    sd = models.Gate
-    query = context.session.query(
-        sd
-    ).filter(sqlalchemy.or_(
-             sd.tenant == context.tenant_id,
-             sd.stack_user_project_id == context.tenant_id)
-             ).order_by(sd.created_at)
-    if server_id:
-        query = query.filter_by(server_id=server_id)
+def gate_get_by_name(context, name):
+    return (context.session.query(models.Gate).
+            filter_by(name=name).one_or_none())
+    
+def gate_get_all(context, tenant_id=None):
+    query = context.session.query(models.Gate)
+    if tenant_id:
+        query = query.filter_by(tenant_id=tenant_id)
     return query.all()
 
 
@@ -141,11 +134,11 @@ def gate_update(context, deployment_id, values):
     return deployment
 
 
-def gate_delete(context, deployment_id):
-    deployment = gate_get(context, deployment_id)
+def gate_delete(context, gate_id):
+    gate = gate_get(context, gate_id)
     session = context.session
     with session.begin(subtransactions=True):
-        session.delete(deployment)
+        session.delete(gate)
 
 
 def target_create(context, values):

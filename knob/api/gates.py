@@ -32,38 +32,36 @@ class GateController(object):
         self.options = options
         #self.rpc_client = rpc_client.EngineClient()
 
+    def format_gate(self, gate):
+        result = {
+            'name': gate.name,
+            'server_id': gate.server_id,
+            'fip_id': gate.fip_id,
+            'tenant_id': gate.tenant_id,
+            'created_at': gate.created_at 
+            }
+        return result
 
     def index(self, req):
         """List SSH gates."""
-        """
-        whitelist = {
-            'server_id': util.PARAM_TYPE_SINGLE,
-        }
-        params = util.get_allowed_params(req.params, whitelist)
-        sds = self.rpc_client.list_software_deployments(req.context, **params)
-        """
-        print ('gate list method get called')
-        # TODO howto pass internalURL
+        print ('--------index -------------------------------')
 
-        #myctx #= context.get_admin_context()
         ctx = req.context        
-        nets = ctx.neutron_client.list_networks()
+        gates = obj.Gate.get_all(ctx)
+        result = [self.format_gate(gate) for gate in gates]
         
-        # replace key to the key client expects to see
-        return {'gates': nets['networks']}
+        return {'gates': result}
 
-    def show(self, req, gate_id):
+    def show(self, req, gate_name):
         """Gets detailed information for a SSH gate."""
-        #sd = self.rpc_client.show_software_deployment(req.context,
-        #   
-        print ('------------in show ---------------------- %s ' % gate_id)
-        sd = 1 
-        return {'software_deployment': sd}
+        print ('------------in show ---------------------- %s ' % gate_name)
+        ctx = req.context
+        gates = obj.Gate.get_by_name(ctx, gate_name) 
+        return {'gates': gates}
 
     #def create(self, req, body):
     def create(self, req, body):
-        """Create a new SSH gate."""
-        
+        """Create a new SSH gate."""        
         print ('------------in create ---------------------- ')
         create_data = dict((k, body.get(k)) for k in (
             'name', 'net_id', 'public_net_id','key'))
@@ -87,46 +85,41 @@ class GateController(object):
         
         create_data['port-id'] = port_id
         # update network configuration with given port id
-        #vm_id = ctx.nova_client.create_service_vm(create_data)
+        #server_id = ctx.nova_client.create_service_vm(create_data)
         # create fip and to attach to given port
         
         #fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
-        vm_id = '74dcc644-527b-4f77-839f-70463126f0f1'
+        server_id = '74dcc644-527b-4f77-839f-70463126f0f1'
         fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
 
         # DB update 
         gate_ref = obj.Gate.create(
                 ctx,dict(name=create_data['name'],
-                             server_id=vm_id,
+                             server_id=server_id,
                              fip_id=fip_id,
                              tenant_id=''))
         
-        gate_id = gate_ref['id']
-        LOG.debug('Gate %s is create successfully' % gate_id)
-        return gate_id
+        LOG.debug('Gate: %s is created successfully' % gate_ref.name)
+        result = self.format_gate(gate_ref) 
+        return {'gates': result}
+    
 
     
-    def delete(self, req, gate_id):
+    def delete(self, req, gate_name):
         """Delete an existing SSH gate."""
         
-        print ('------------in delete ---------------------- %s ' % gate_id)
+        print ('------------in delete ---------------------- %s ' % gate_name)
         ctx = req.context
         # lookup correct gate by id
-        gate_ref = obj.Gate.get_by_id(ctx, gate_id)
-        vm_id = gate_ref['vm_id']
+        gate_ref = obj.Gate.get_by_name(ctx, gate_name)
+        server_id = gate_ref['server_id']
         fip_id = gate_ref['fip_id']
-        ctx.neutron_client.disassociate_fip(fip_id)
-        ctx.nova_client.remove_service_vm(vm_id)
+        gate_id = gate_ref['id']
+        #ctx.neutron_client.disassociate_fip(fip_id)
+        #ctx.nova_client.remove_service_vm(server_id)
         
         obj.Gate.delete(ctx,gate_id)
         
-        res = None
-        if res is not None:
-            raise exc.HTTPBadRequest(res['Error'])
-
-        raise exc.HTTPNoContent()
-
-
 def create_resource(options):
     """SSH gates resource factory method."""
     deserializer = wsgi.JSONRequestDeserializer()
