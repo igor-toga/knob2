@@ -141,6 +141,16 @@ def gate_delete(context, gate_id):
         session.delete(gate)
 
 
+def target_get_all_by_args(context, gate_id, target_id):
+    if target_id is not None:
+        return (context.session.query(models.Target).
+                filter_by(gate_id=gate_id).
+                filter_by(target_id=target_id).all())
+    else:
+        return (context.session.query(models.Target).
+                filter_by(gate_id=gate_id).all())
+
+
 def target_create(context, values):
     obj_ref = models.Target()
     obj_ref.update(values)
@@ -152,37 +162,14 @@ def target_create(context, values):
     return obj_ref
 
 
-def target_get(context, deployment_id):
+def target_get(context, target_id):
     result = context.session.query(
-        models.Target).get(deployment_id)
-    if (result is not None and context is not None and
-        context.tenant_id not in (result.tenant,
-                                  result.stack_user_project_id)):
-        result = None
+        models.Target).get(target_id)
 
     if not result:
-        raise exception.NotFound(_('Deployment with id %s not found') %
-                                 deployment_id)
+        raise exception.NotFound(_('Target with id %s not found') %
+                                 target_id)
     return result
-
-
-def target_get_all(context, server_id=None):
-    sd = models.Target
-    query = context.session.query(
-        sd
-    ).filter(sqlalchemy.or_(
-             sd.tenant == context.tenant_id,
-             sd.stack_user_project_id == context.tenant_id)
-             ).order_by(sd.created_at)
-    if server_id:
-        query = query.filter_by(server_id=server_id)
-    return query.all()
-
-
-def target_update(context, deployment_id, values):
-    deployment = target_get(context, deployment_id)
-    update_and_save(context, deployment, values)
-    return deployment
 
 
 def target_delete(context, deployment_id):
@@ -192,8 +179,8 @@ def target_delete(context, deployment_id):
         session.delete(deployment)
 
 
-def associate_create(context, values):
-    obj_ref = models.Associate()
+def key_create(context, values):
+    obj_ref = models.Key()
     obj_ref.update(values)
     session = context.session
 
@@ -203,44 +190,22 @@ def associate_create(context, values):
     return obj_ref
 
 
-def associate_get(context, deployment_id):
+def key_get(context, key_id):
     result = context.session.query(
-        models.Associate).get(deployment_id)
-    if (result is not None and context is not None and
-        context.tenant_id not in (result.tenant,
-                                  result.stack_user_project_id)):
-        result = None
-
+        models.Key).get(key_id)
+    
     if not result:
-        raise exception.NotFound(_('Deployment with id %s not found') %
-                                 deployment_id)
+        raise exception.NotFound(_('Key with id %s not found') %
+                                 key_id)
     return result
 
 
-def associate_get_all(context, server_id=None):
-    sd = models.Associate
-    query = context.session.query(
-        sd
-    ).filter(sqlalchemy.or_(
-             sd.tenant == context.tenant_id,
-             sd.stack_user_project_id == context.tenant_id)
-             ).order_by(sd.created_at)
-    if server_id:
-        query = query.filter_by(server_id=server_id)
-    return query.all()
 
-
-def associate_update(context, deployment_id, values):
-    deployment = associate_get(context, deployment_id)
-    update_and_save(context, deployment, values)
-    return deployment
-
-
-def associate_delete(context, deployment_id):
-    deployment = associate_get(context, deployment_id)
+def key_delete(context, gate_id):
+    key = key_get(context, gate_id)
     session = context.session
     with session.begin(subtransactions=True):
-        session.delete(deployment)
+        session.delete(key)
 
 
 

@@ -13,7 +13,7 @@
 # under the License.
 
 
-"""Associate object."""
+"""Target object."""
 
 from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
@@ -22,7 +22,7 @@ from knob.db.sqlalchemy import api as db_api
 from knob.objects import base as knob_base
 
 
-class Associate(
+class Key(
         knob_base.KnobObject,
         base.VersionedObjectDictCompat,
         base.ComparableVersionedObject,
@@ -40,9 +40,9 @@ class Associate(
     }
 
     @staticmethod
-    def _from_db_object(context, deployment, db_deployment):
+    def _from_db_object(context, deployment, db_key):
         for field in deployment.fields:
-            deployment[field] = db_deployment[field]
+            deployment[field] = db_key[field]
         deployment._context = context
         deployment.obj_reset_changes()
         return deployment
@@ -50,30 +50,36 @@ class Associate(
     @classmethod
     def create(cls, context, values):
         return cls._from_db_object(
-            context, cls(), db_api.associate_create(context, values))
+            context, cls(), db_api.target_create(context, values))
 
     @classmethod
-    def get_by_id(cls, context, deployment_id):
+    def get_by_id(cls, context, key_id):
         return cls._from_db_object(
             context, cls(),
-            db_api.associate_get(context, deployment_id))
+            db_api.target_get(context, key_id))
+        
+    @classmethod
+    def get_by_name(cls, context, target_name):
+        return cls._from_db_object(
+            context, cls(),
+            db_api.key_get_by_name(context, target_name))
 
     @classmethod
     def get_all(cls, context, server_id=None):
-        return [cls._from_db_object(context, cls(), db_deployment)
-                for db_deployment in db_api.associate_get_all(
+        return [cls._from_db_object(context, cls(), db_key)
+                for db_key in db_api.target_get_all(
                     context, server_id)]
 
     @classmethod
-    def update_by_id(cls, context, deployment_id, values):
+    def update_by_id(cls, context, key_id, values):
         """Note this is a bit unusual as it returns the object.
 
         Other update_by_id methods return a bool (was it updated).
         """
         return cls._from_db_object(
             context, cls(),
-            db_api.associate_update(context, deployment_id, values))
+            db_api.target_update(context, key_id, values))
 
     @classmethod
-    def delete(cls, context, deployment_id):
-        db_api.associate_delete(context, deployment_id)
+    def delete(cls, context, key_id):
+        db_api.target_delete(context, key_id)

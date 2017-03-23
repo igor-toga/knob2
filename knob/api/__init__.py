@@ -116,13 +116,13 @@ class API(wsgi.Router):
                     },
                     {
                         'name': 'gate_show',
-                        'url': '/{gate_name}',
+                        'url': '/{gate_id}',
                         'action': 'show',
                         'method': 'GET'
                     },
                     {
                         'name': 'gate_delete',
-                        'url': '/{gate_name}',
+                        'url': '/{gate_id}',
                         'action': 'delete',
                         'method': 'DELETE'
                     },
@@ -130,6 +130,42 @@ class API(wsgi.Router):
                         'name': 'gate_index',
                         'url': '',
                         'action': 'index',
+                        'method': 'GET'
+                    },
+                    {
+                        'name': 'add_target',
+                        'url': '{gate_id}/targets',
+                        'action': 'add_target',
+                        'method': 'POST'
+                    },
+                    {
+                        'name': 'remove_target',
+                        'url': '{gate_id}/targets/{server_id}',
+                        'action': 'remove_target',
+                        'method': 'DELETE'
+                    },
+                    {
+                        'name': 'list_targets',
+                        'url': '{gate_id}/targets',
+                        'action': 'list_targets',
+                        'method': 'GET'
+                    },
+                    {
+                        'name': 'add_key',
+                        'url': '{gate_id}/keys',
+                        'action': 'add_key',
+                        'method': 'POST'
+                    },
+                    {
+                        'name': 'remove_key',
+                        'url': '{gate_id}/keys/{key_id}',
+                        'action': 'remove_key',
+                        'method': 'DELETE'
+                    },
+                    {
+                        'name': 'list_keys',
+                        'url': '{gate_name}/keys',
+                        'action': 'list_keys',
                         'method': 'GET'
                     },
                 ])
@@ -140,61 +176,14 @@ class API(wsgi.Router):
                 path_prefix='/targets',
                 routes=[
                     {
-                        'name': 'target_index',
-                        'url': '',
-                        'action': 'index',
+                        'name': 'target_config',
+                        'url': '/{server_id}/config',
+                        'action': 'generate_config',
                         'method': 'GET'
-                    },
-                    {
-                        'name': 'target_create',
-                        'url': '',
-                        'action': 'create',
-                        'method': 'POST'
-                    },
-                    {
-                        'name': 'target_show',
-                        'url': '/{target_id}',
-                        'action': 'show',
-                        'method': 'GET'
-                    },
-                    {
-                        'name': 'target_delete',
-                        'url': '/{target_id}',
-                        'action': 'delete',
-                        'method': 'DELETE'
                     }
                 ])
         
-        # Associates
-        associate_resource = associates.create_resource(conf)
-        connect(controller=associate_resource,
-                path_prefix='/associates',
-                routes=[
-                    {
-                        'name': 'associate_index',
-                        'url': '',
-                        'action': 'index',
-                        'method': 'GET'
-                    },
-                    {
-                        'name': 'associate_create',
-                        'url': '',
-                        'action': 'create',
-                        'method': 'POST'
-                    },
-                    {
-                        'name': 'associate_show',
-                        'url': '/{associate_id}',
-                        'action': 'show',
-                        'method': 'GET'
-                    },
-                    {
-                        'name': 'associate_delete',
-                        'url': '/{associate_id}',
-                        'action': 'delete',
-                        'method': 'DELETE'
-                    }
-                ])
+
         
         # Services
         service_resource = services.create_resource(conf)

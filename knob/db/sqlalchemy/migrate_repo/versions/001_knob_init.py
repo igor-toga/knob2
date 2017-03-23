@@ -51,25 +51,33 @@ def define_tables(meta):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('host', String(length=255)),
+        Column('server_id', String(length=36), primary_key=True, nullable=False),
+        Column('name', String(length=255)),
+        Column('gate_id', Integer,
+                          ForeignKey('gates.id'),
+                          nullable=False),
+        Column('routable', Boolean),
         mysql_engine='InnoDB'
         )
-    associates = Table(
-        'associates', meta,
+    keys = Table(
+        'keys', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('host', String(length=255)),
+        Column('name', String(length=255)),
+        Column('content', String(length=1024)),
+        Column('gate_id', Integer,
+                          ForeignKey('gates.id'),
+                          nullable=False),
         mysql_engine='InnoDB'
         )
 
     return [services,
             gates,
             targets,
-            associates
+            keys
             ]
 
 
@@ -88,7 +96,7 @@ def upgrade(migrate_engine):
         tables = ["services",
                   "gates",
                   "targets",
-                  "associates",
+                  "keys",
                   ]
 
         migrate_engine.execute("SET foreign_key_checks = 0")

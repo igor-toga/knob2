@@ -82,3 +82,5 @@ class Gate(
     @classmethod
     def delete(cls, context, gate_id):
         db_api.gate_delete(context, gate_id)
+        
+    

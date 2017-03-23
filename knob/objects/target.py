@@ -28,13 +28,10 @@ class Target(
         base.ComparableVersionedObject,
 ):
     fields = {
-        'id': fields.StringField(),
-        'config_id': fields.StringField(),
         'server_id': fields.StringField(),
-        'tenant': fields.StringField(),
-        'action': fields.StringField(nullable=True),
-        'status': fields.StringField(nullable=True),
-        'status_reason': fields.StringField(nullable=True),
+        'name': fields.StringField(nullable=True),
+        'gate_id': fields.IntegerField(nullable=True),
+        'routable': fields.BooleanField(),
         'created_at': fields.DateTimeField(read_only=True),
         'updated_at': fields.DateTimeField(nullable=True),
     }
@@ -57,23 +54,15 @@ class Target(
         return cls._from_db_object(
             context, cls(),
             db_api.target_get(context, deployment_id))
-
-    @classmethod
-    def get_all(cls, context, server_id=None):
-        return [cls._from_db_object(context, cls(), db_deployment)
-                for db_deployment in db_api.target_get_all(
-                    context, server_id)]
-
-    @classmethod
-    def update_by_id(cls, context, deployment_id, values):
-        """Note this is a bit unusual as it returns the object.
-
-        Other update_by_id methods return a bool (was it updated).
-        """
-        return cls._from_db_object(
-            context, cls(),
-            db_api.target_update(context, deployment_id, values))
-
+        
     @classmethod
     def delete(cls, context, deployment_id):
         db_api.target_delete(context, deployment_id)
+
+    @classmethod
+    def get_all_by_args(cls, context, gate_id, target_id=None):
+        return cls._from_db_objects(
+            context,
+            db_api.target_get_all_by_args(context,
+                                           gate_id,
+                                           target_id))

@@ -73,19 +73,23 @@ class Gate(BASE, KnobBase):
     tenant_id = Column(String(36))
 
     
-class Associate(BASE, KnobBase):
+class Key(BASE, KnobBase):
     """Represents a Ssh associates that allowed to work with service."""
 
-    __tablename__ = 'associates'
+    __tablename__ = 'keys'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    name = Column(String(length=255)),
+    content = Column(String(length=1024)),
+    gate_id = Column(Integer, ForeignKey('gates.id'), nullable=False)
 
 class Target(BASE, KnobBase):
     """Represents a Ssh targets on for specified service."""
 
     __tablename__ = 'targets'
-    id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    server_id = Column(String(length=36), primary_key=True, nullable=False),
+    name = Column(String(length=255)),
+    gate_id = Column(Integer, ForeignKey('gates.id'), nullable=False),
+    routable = Column(Boolean),
 
 
 def register_models():
@@ -99,7 +103,7 @@ def register_models():
     from sqlalchemy import create_engine
     models = (Service,
               Gate,
-              Associate,
+              Key,
               Target
               )
     engine = create_engine(CONF.database.connection, echo=False)
