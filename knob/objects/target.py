@@ -37,12 +37,12 @@ class Target(
     }
 
     @staticmethod
-    def _from_db_object(context, deployment, db_deployment):
-        for field in deployment.fields:
-            deployment[field] = db_deployment[field]
-        deployment._context = context
-        deployment.obj_reset_changes()
-        return deployment
+    def _from_db_object(context, target, db_target):
+        for field in target.fields:
+            target[field] = db_target[field]
+        target._context = context
+        target.obj_reset_changes()
+        return target
 
     @classmethod
     def create(cls, context, values):
@@ -50,14 +50,14 @@ class Target(
             context, cls(), db_api.target_create(context, values))
 
     @classmethod
-    def get_by_id(cls, context, deployment_id):
+    def get_by_id(cls, context, target_id):
         return cls._from_db_object(
             context, cls(),
-            db_api.target_get(context, deployment_id))
+            db_api.target_get(context, target_id))
         
     @classmethod
-    def delete(cls, context, deployment_id):
-        db_api.target_delete(context, deployment_id)
+    def delete(cls, context, target_id):
+        db_api.target_delete(context, target_id)
 
     @classmethod
     def get_all_by_args(cls, context, gate_id, target_id=None):

@@ -208,6 +208,15 @@ def key_delete(context, gate_id):
         session.delete(key)
 
 
+def key_get_all_by_args(context, gate_id, key_id):
+    if key_id is not None:
+        return (context.session.query(models.Key).
+                filter_by(gate_id=gate_id).
+                filter_by(target_id=key_id).all())
+    else:
+        return (context.session.query(models.Key).
+                filter_by(gate_id=gate_id).all())
+
 
 def service_create(context, values):
     service = models.Service()

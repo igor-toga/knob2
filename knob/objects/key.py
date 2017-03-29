@@ -29,57 +29,41 @@ class Key(
 ):
     fields = {
         'id': fields.StringField(),
-        'config_id': fields.StringField(),
-        'server_id': fields.StringField(),
-        'tenant': fields.StringField(),
-        'action': fields.StringField(nullable=True),
-        'status': fields.StringField(nullable=True),
-        'status_reason': fields.StringField(nullable=True),
+        'name': fields.StringField(),
+        'gate_id': fields.IntegerField(),
+        'content': fields.StringFiled(),
         'created_at': fields.DateTimeField(read_only=True),
         'updated_at': fields.DateTimeField(nullable=True),
     }
 
     @staticmethod
-    def _from_db_object(context, deployment, db_key):
-        for field in deployment.fields:
-            deployment[field] = db_key[field]
-        deployment._context = context
-        deployment.obj_reset_changes()
-        return deployment
+    def _from_db_object(context, key, db_key):
+        for field in key.fields:
+            key[field] = db_key[field]
+        key._context = context
+        key.obj_reset_changes()
+        return key
 
     @classmethod
     def create(cls, context, values):
         return cls._from_db_object(
-            context, cls(), db_api.target_create(context, values))
+            context, cls(), db_api.key_create(context, values))
 
     @classmethod
     def get_by_id(cls, context, key_id):
         return cls._from_db_object(
             context, cls(),
-            db_api.target_get(context, key_id))
+            db_api.key_get(context, key_id))
         
     @classmethod
-    def get_by_name(cls, context, target_name):
-        return cls._from_db_object(
-            context, cls(),
-            db_api.key_get_by_name(context, target_name))
+    def get_all_by_args(cls, context, gate_id, key_id=None):
+        return cls._from_db_objects(
+            context,
+            db_api.key_get_all_by_args(context,
+                                           gate_id,
+                                           key_id))
 
-    @classmethod
-    def get_all(cls, context, server_id=None):
-        return [cls._from_db_object(context, cls(), db_key)
-                for db_key in db_api.target_get_all(
-                    context, server_id)]
-
-    @classmethod
-    def update_by_id(cls, context, key_id, values):
-        """Note this is a bit unusual as it returns the object.
-
-        Other update_by_id methods return a bool (was it updated).
-        """
-        return cls._from_db_object(
-            context, cls(),
-            db_api.target_update(context, key_id, values))
 
     @classmethod
     def delete(cls, context, key_id):
-        db_api.target_delete(context, key_id)
+        db_api.key_delete(context, key_id)

@@ -55,6 +55,15 @@ class GateController(object):
             }
         return result
 
+    def format_key(self, key):
+        result = {
+            'id': key.id,
+            'name': key.name,
+            'gate_id': key.gate_id,
+            'created_at': key.created_at 
+            }
+        return result
+
 
     def index(self, req):
         """List SSH gates."""
@@ -197,28 +206,29 @@ class GateController(object):
         # DB update 
         key_ref = key_obj.Key.create(
             ctx,dict(name=data['name'],
-                     key_content=data['key_content'],
+                     content=data['key_content'],
                      gate=gate_id))
         
         LOG.debug('Key record: %s is created successfully' % key_ref.name)
         result = self.format_target(key_ref) 
         return {'keys': result}
         
-    def remove_key(self, req, gate_id, key):
+    def remove_key(self, req, gate_id, key_id):
         """Remove key to gate."""
-        print ('------------in remove_key: %s to gate %s ' % (key, gate_id))
+        print ('------------in remove_key: %s to gate %s ' % (key_id, gate_id))
         ctx = req.context
         
-        key_ref = key_obj.Key.get_by_name(ctx, key)
-        key_id = key_ref['id']
-        key_obj.Key.delete(ctx,key_id)
+        #verify if gate_id exists
+        key_ref = key_obj.Key.get_all_by_args(ctx, gate_id, key_id)
+        if key_ref is not None:
+            target_obj.Target.delete(ctx,key_id)
         
-    def list_keys(self, req):
+    def list_keys(self, req, gate_id):
         """List keys on gate."""
-        print ('--------list keys -------------------------------')
+        print ('--------list keys on gate: %s' % gate_id)
 
         ctx = req.context        
-        keys = key_obj.Key.get_all(ctx)
+        keys = key_obj.Key.get_all_by_args(ctx, gate_id)
         result = [self.format_key(key) for key in keys]
         return {'keys': result}
 

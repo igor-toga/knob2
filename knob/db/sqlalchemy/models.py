@@ -19,6 +19,8 @@
 """
 SQLAlchemy models for knob data.
 """
+import uuid
+
 from oslo_config import cfg
 from oslo_db.sqlalchemy import models
 from oslo_utils import timeutils
@@ -63,7 +65,7 @@ class Service(BASE, KnobBase):
 
 
 class Gate(BASE, KnobBase):
-    """Represents a Ssh gates (bastion VM hosts)"""
+    """Represents a Ssh gates (VM hosts)"""
 
     __tablename__ = 'gates'
     id = Column(Integer, primary_key=True, nullable=False)
@@ -71,16 +73,22 @@ class Gate(BASE, KnobBase):
     fip_id = Column(String(36), nullable=False)
     server_id = Column(String(36), nullable=False)
     tenant_id = Column(String(36))
+    
+    keys = relationship("Key")
+    targets = relationship("Target")
 
     
 class Key(BASE, KnobBase):
     """Represents a Ssh associates that allowed to work with service."""
 
     __tablename__ = 'keys'
-    id = Column(Integer, primary_key=True)
+    id = Column(String(36), primary_key=True,
+                           default=lambda: str(uuid.uuid4()))
     name = Column(String(length=255)),
     content = Column(String(length=1024)),
     gate_id = Column(Integer, ForeignKey('gates.id'), nullable=False)
+    
+    gate = relationship("Gate", backref="keys")
 
 class Target(BASE, KnobBase):
     """Represents a Ssh targets on for specified service."""
@@ -90,6 +98,8 @@ class Target(BASE, KnobBase):
     name = Column(String(length=255)),
     gate_id = Column(Integer, ForeignKey('gates.id'), nullable=False),
     routable = Column(Boolean),
+    
+    gate = relationship("Gate", backref="targets")
 
 
 def register_models():

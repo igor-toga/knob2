@@ -39,12 +39,12 @@ class Gate(
     }
 
     @staticmethod
-    def _from_db_object(context, deployment, db_deployment):
-        for field in deployment.fields:
-            deployment[field] = db_deployment[field]
-        deployment._context = context
-        deployment.obj_reset_changes()
-        return deployment
+    def _from_db_object(context, gate, db_gate):
+        for field in gate.fields:
+            gate[field] = db_gate[field]
+        gate._context = context
+        gate.obj_reset_changes()
+        return gate
 
     @classmethod
     def create(cls, context, values):
@@ -65,8 +65,8 @@ class Gate(
 
     @classmethod
     def get_all(cls, context, server_id=None):
-        return [cls._from_db_object(context, cls(), db_deployment)
-                for db_deployment in db_api.gate_get_all(
+        return [cls._from_db_object(context, cls(), db_gate)
+                for db_gate in db_api.gate_get_all(
                     context, server_id)]
 
     @classmethod

@@ -65,7 +65,7 @@ def define_tables(meta):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
+        Column('id', String(length=36), primary_key=True, nullable=False),
         Column('name', String(length=255)),
         Column('content', String(length=1024)),
         Column('gate_id', Integer,
