@@ -10,6 +10,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+
+import os
+import uuid
+
 from oslo_log import log as logging
 from webob import exc
 
@@ -21,6 +26,8 @@ from knob.objects import target as target_obj
 from knob.objects import key as key_obj
 
 LOG = logging.getLogger(__name__)
+MGMT_KEY_PREFIX = 'gate-'
+KEY_STORE_PATH = '/etc/knob/keys/'
 
 class GateController(object):
     """WSGI controller for SSH gates in Knob v1 API.
@@ -82,12 +89,45 @@ class GateController(object):
         gates = gate_obj.Gate.get_by_id(ctx, gate_id) 
         return {'gates': gates}
 
-    #def create(self, req, body):
+    def _create_keypair(self, ctx, name):
+        # create new key
+        key_name = MGMT_KEY_PREFIX + name
+        # create key and store at nova DB
+        key = ctx.nova_client.keypairs.create(key_name)
+        return key
+        
+    def _store_keypair(self, ctx, gate_id, key):
+        # store private key for further usage
+        stream = open(KEY_STORE_PATH+key['keypair']['name'], 'w')
+        stream.write(key['key_pair']['private_key'])
+        stream.close()
+        
+        # DB update: store mgmt key along with gate
+        key_obj.Key.create(
+            ctx,dict(name=key['keypair']['name'],
+                     content=key['keypair']['public_key'],
+                     gate=gate_id))
+        
+    def _delete_keypair(self, ctx, name):
+        key_name = MGMT_KEY_PREFIX + name
+        # remove nova key
+        ctx.nova_client.keypairs.delete(key_name)
+        
+        # remove private key file
+        key_path = KEY_STORE_PATH+key_name
+        os.remove(key_path)
+        
+        # remove knob key reference
+        key_obj.Key.delete(ctx, name)
+        
+    def _update_security_groups(self, security_group):
+        pass
+
     def create(self, req, body):
         """Create a new SSH gate."""        
         print ('------------in create ---------------------- ')
         create_data = dict((k, body.get(k)) for k in (
-            'name', 'net_id', 'public_net_id','key'))
+            'name', 'net_id', 'public_net_id'))
         create_data['flavor'] = 'm1.tiny'
         create_data['image'] = 'cirros-0.3.5-x86_64-disk'
         create_data['security_groups'] = 'default'
@@ -97,30 +137,35 @@ class GateController(object):
         if 'public_net_id' not in create_data:
             raise exc.HTTPBadRequest('Not supplied required parameter')
  
-        """
-         create neutron port first
-         create service VM with provided parameters and given port
-         create floating ip
-         attach VM port to floating ip
-        """
+        # create key
+        key = self._create_keypair(ctx, create_data['name'])
+        create_data['key_name'] = key['keypair']['name']
+        
+        # add controller host as 'allowed' to security group once
+        self._update_security_groups(ctx, create_data['security_groups'])
+        
+        # create port
         port_id = 'e89f6467-00b7-42a3-8b03-8107bd5f428c'
         #port_id = ctx.neutron_client.create_port(create_data)
-        
         create_data['port-id'] = port_id
-        # update network configuration with given port id
-        #server_id = ctx.nova_client.create_service_vm(create_data)
-        # create fip and to attach to given port
         
-        #fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
+        # update network configuration with given port id
         server_id = '74dcc644-527b-4f77-839f-70463126f0f1'
-        fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
+        #server_id = ctx.nova_client.create_service_vm(create_data)
 
-        # DB update 
+        # create fip and to attach to given port
+        fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
+        #fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
+
+        # DB update: crete new gate 
         gate_ref = gate_obj.Gate.create(
                 ctx,dict(name=create_data['name'],
                              server_id=server_id,
                              fip_id=fip_id,
                              tenant_id=''))
+        
+        # store keypair for further use
+        self._store_keypair(ctx, gate_ref['id'], key)
         
         LOG.debug('Gate: %s is created successfully' % gate_ref.name)
         result = self.format_gate(gate_ref) 
@@ -138,10 +183,18 @@ class GateController(object):
         server_id = gate_ref['server_id']
         fip_id = gate_ref['fip_id']
         gate_id = gate_ref['id']
-        #ctx.neutron_client.disassociate_fip(fip_id)
+        
+        # remove server
         #ctx.nova_client.remove_service_vm(server_id)
         
-        gate_obj.Gate.delete(ctx,gate_id)
+        # disassociate fip & delete port
+        #port_id = ctx.neutron_client.disassociate_fip(fip_id)
+
+        # remove mgmt key pair
+        #self._delete_keypair(ctx,  gate_ref['name'])
+        
+        # remove gate object from DB
+        gate_obj.Gate.delete(ctx, gate_id)
         
     def add_target(self, req, gate_id, body):
         """Add target to gate."""

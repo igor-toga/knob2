@@ -173,13 +173,13 @@ class API(wsgi.Router):
         # Targets
         target_resource = targets.create_resource(conf)
         connect(controller=target_resource,
-                path_prefix='/targets',
+                path_prefix='/target_config',
                 routes=[
                     {
                         'name': 'target_config',
-                        'url': '/{server_id}/config',
+                        'url': '',
                         'action': 'generate_config',
-                        'method': 'GET'
+                        'method': 'POST'
                     }
                 ])
         

@@ -51,11 +51,11 @@ class NeutronClient(object):
         return fip_id
     
     def disassociate_fip(self, fip_id):
-        """disassociate fip and associate with given port_id """
-        request = {'floatingip': 
-                   {'port_id': None}
-               }
-        self.client().update_floatingip(fip_id, request)
+        """delete fip and attached port """
+        #request = {'floatingip': 
+        #           {'port_id': None}
+        #       }
+        #self.client().update_floatingip(fip_id, request)
         self.client().delete_floatingip(fip_id)
     
     def create_port(self, create_data):

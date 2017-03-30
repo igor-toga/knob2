@@ -17,10 +17,12 @@ from webob import exc
 from knob.common import serializers
 from knob.common import wsgi
 from knob.common import exception
+from knob.objects import gate as gate_obj
+from knob.objects import target as target_obj
 
 
 class TargetController(object):
-    """WSGI controller for SSH gates in Knob v1 API.
+    """WSGI controller for SSH targets in Knob v1 API.
 
     Implements the API actions.
     """
@@ -29,53 +31,59 @@ class TargetController(object):
 
     def __init__(self, options):
         self.options = options
-        #self.rpc_client = rpc_client.EngineClient()
-
-
-    def index(self, req):
-        """List SSH gates."""
-        """
-        whitelist = {
-            'server_id': util.PARAM_TYPE_SINGLE,
-        }
-        params = util.get_allowed_params(req.params, whitelist)
-        sds = self.rpc_client.list_software_deployments(req.context, **params)
-        """
-        sds = 1
-        raise exception.KnobException('---------------<<<<<<<<<>>>>>>>>>>>>>------')
-        return {'software_deployments': sds}
-
-    def show(self, req, target_id):
-        """Gets detailed information for a SSH gate."""
-        #sd = self.rpc_client.show_software_deployment(req.context,
-        #                                              deployment_id)
-        sd = 1 
-        return {'software_deployment': sd}
-
-    def create(self, req, body):
-        """Create a new SSH gate."""
-        """
-        create_data = dict((k, body.get(k)) for k in (
-            'config_id', 'server_id', 'input_values',
-            'action', 'status', 'status_reason', 'stack_user_project_id'))
+    
+    
+    def format_config(self, data):
+        config = """
+        Host %s
+          HostName %s
+          User ubuntu
+          ForwardAgent yes
+          IdentityFile %s
+        
+        Host %s
+          HostName %s
+          User ubuntu
+          ForwardAgent yes
+          IdentityFile %s
+          ProxyCommand ssh %s -W %h:%p
+        """ % (
+            data['gate_name'],
+            data['gate_ip'],
+            data['gate_key_file'],
+            data['target_name'],
+            data['target_ip'],
+            data['user'],
+            data['target_key_file'],
+            data['gate_name']
+            )
+        return config
+    
+    def generate_config(self, req, body):
+        """generate config for given target and gate"""
+        
+        data = dict((k, body.get(k)) for k in (
+            'gate_id', 'gate_key_file', 'user',
+            'target_id', 'target_key_file'))
  
-        sd = self.rpc_client.create_software_deployment(req.context,
-                                                        **create_data)
-        """
-        sd = 1
-        return {'software_deployment': sd}
+        ctx = req.context
+        target_ip = ctx.nova_client.get_ip(data['target_id'], 'private', 4)
+        target_ref = target_obj.Target.get_by_id(ctx, data['target_id'])
+        
+        gate_ref = gate_obj.Gate.get_by_id(ctx, data['gate_id'])
+        server_id = gate_ref['server_id']
+        gate_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
+        # complete data collection with info from objects
+        data['target_ip'] = target_ip
+        data['target_name'] = target_ref['name']
+        data['gate_ip'] = gate_ip
+        data['gate_name'] = gate_ref['name']
+        
+        config = self.format_config(data)
+        
+        return {'config': config}
 
-    def delete(self, req, target_id):
-        """Delete an existing SSH gate."""
-        #res = self.rpc_client.delete_software_deployment(req.context,
-        #                                                 deployment_id)
-
-        res = 1
-        if res is not None:
-            raise exc.HTTPBadRequest(res['Error'])
-
-        raise exc.HTTPNoContent()
-
+    
 
 def create_resource(options):
     """SSH targets resource factory method."""
