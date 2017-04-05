@@ -18,6 +18,7 @@ import uuid
 from oslo_log import log as logging
 from webob import exc
 
+from knob.api import deploy_key as engine
 from knob.common import serializers
 from knob.common import wsgi
 from knob.common.exception import KnobException
@@ -262,19 +263,48 @@ class GateController(object):
                      content=data['key_content'],
                      gate=gate_id))
         
+        gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
+        server_id = gate_ref['server_id']
+        server_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
+        
+        key_name = MGMT_KEY_PREFIX + gate_ref['name']
+        config = {
+            'private_key_file': key_name,
+            'username': 'cirros',
+            'append': True,
+            'host': server_ip,
+            'key': data['key_content']
+            }
+        engine.deploy_key(config)
+        
+
         LOG.debug('Key record: %s is created successfully' % key_ref.name)
         result = self.format_target(key_ref) 
         return {'keys': result}
         
     def remove_key(self, req, gate_id, key_id):
-        """Remove key to gate."""
+        """Remove key from gate."""
         print ('------------in remove_key: %s to gate %s ' % (key_id, gate_id))
         ctx = req.context
         
         #verify if gate_id exists
         key_ref = key_obj.Key.get_all_by_args(ctx, gate_id, key_id)
         if key_ref is not None:
-            target_obj.Target.delete(ctx,key_id)
+            key_obj.Key.delete(ctx,key_id)
+            
+            gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
+            server_id = gate_ref['server_id']
+            server_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
+            
+            key_name = MGMT_KEY_PREFIX + gate_ref['name']
+            config = {
+                'private_key_file': key_name,
+                'username': 'cirros',
+                'append': False,
+                'host': server_ip,
+                'key': key_ref['content']
+                }
+            engine.deploy_key(config)
         
     def list_keys(self, req, gate_id):
         """List keys on gate."""
