@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey
 from sqlalchemy import Integer, MetaData, String, Table
@@ -55,12 +56,13 @@ def define_tables(meta):
         Column('name', String(length=255)),
         Column('gate_id', Integer,
                           ForeignKey('gates.id'),
+                          index=True,
                           nullable=False),
         Column('routable', Boolean),
         mysql_engine='InnoDB'
         )
     keys = Table(
-        'keys', meta,
+        'gate_keys', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
@@ -70,14 +72,15 @@ def define_tables(meta):
         Column('content', String(length=1024)),
         Column('gate_id', Integer,
                           ForeignKey('gates.id'),
+                          index=True,
                           nullable=False),
         mysql_engine='InnoDB'
         )
-
+    
     return [services,
             gates,
             targets,
-            keys
+            keys,
             ]
 
 
@@ -96,7 +99,7 @@ def upgrade(migrate_engine):
         tables = ["services",
                   "gates",
                   "targets",
-                  "keys",
+                  "gate_keys",
                   ]
 
         migrate_engine.execute("SET foreign_key_checks = 0")

@@ -183,8 +183,8 @@ function configure_knob {
     #cp -p $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR
     cp $KNOB_DIR/etc/knob/api-paste.ini $KNOB_CONF_DIR/api-paste.ini
     cp $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR/policy.json
-    sudo cp $KNOB_DIR/knob/cmd/boot.py $KNOB_BIN_DIR/boot.py
-    sudo cp $KNOB_DIR/knob/cmd/manage.py $KNOB_BIN_DIR/manage.py
+    sudo cp $KNOB_DIR/knob-api $KNOB_BIN_DIR/knob-api
+    sudo cp $KNOB_DIR/knob-manage $KNOB_BIN_DIR/knob-manage
 
     rm -f $KNOB_CONF
 

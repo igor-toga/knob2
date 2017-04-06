@@ -17,7 +17,6 @@ import six
 
 from knob.api import gates
 from knob.api import targets
-from knob.api import associates
 from knob.api import services
 from knob.common import wsgi
 

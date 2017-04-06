@@ -30,8 +30,8 @@ class Key(
     fields = {
         'id': fields.StringField(),
         'name': fields.StringField(),
+        'content': fields.StringField(),
         'gate_id': fields.IntegerField(),
-        'content': fields.StringFiled(),
         'created_at': fields.DateTimeField(read_only=True),
         'updated_at': fields.DateTimeField(nullable=True),
     }

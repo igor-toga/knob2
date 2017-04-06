@@ -27,7 +27,7 @@ class Service(
         base.ComparableVersionedObject,
 ):
     fields = {
-        'id': fields.StringField(),
+        'id': fields.IntegerField(),
         'host': fields.StringField(),
         'binary': fields.StringField(),
         'topic': fields.StringField(),

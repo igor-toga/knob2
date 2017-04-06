@@ -28,7 +28,7 @@ class Gate(
         base.ComparableVersionedObject,
 ):
     fields = {
-        'id': fields.StringField(),
+        'id': fields.IntegerField(),
         'name': fields.StringField(),
         'fip_id': fields.StringField(),
         'server_id': fields.StringField(),
