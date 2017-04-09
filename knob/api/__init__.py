@@ -133,37 +133,37 @@ class API(wsgi.Router):
                     },
                     {
                         'name': 'add_target',
-                        'url': '{gate_id}/targets',
+                        'url': '/{gate_id}/targets',
                         'action': 'add_target',
                         'method': 'POST'
                     },
                     {
                         'name': 'remove_target',
-                        'url': '{gate_id}/targets/{server_id}',
+                        'url': '/{gate_id}/targets/{target_id}',
                         'action': 'remove_target',
                         'method': 'DELETE'
                     },
                     {
                         'name': 'list_targets',
-                        'url': '{gate_id}/targets',
+                        'url': '/{gate_id}/targets',
                         'action': 'list_targets',
                         'method': 'GET'
                     },
                     {
                         'name': 'add_key',
-                        'url': '{gate_id}/keys',
+                        'url': '/{gate_id}/keys',
                         'action': 'add_key',
                         'method': 'POST'
                     },
                     {
                         'name': 'remove_key',
-                        'url': '{gate_id}/keys/{key_id}',
+                        'url': '/{gate_id}/keys/{key_id}',
                         'action': 'remove_key',
                         'method': 'DELETE'
                     },
                     {
                         'name': 'list_keys',
-                        'url': '{gate_name}/keys',
+                        'url': '/{gate_name}/keys',
                         'action': 'list_keys',
                         'method': 'GET'
                     },

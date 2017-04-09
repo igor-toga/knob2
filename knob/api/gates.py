@@ -19,15 +19,15 @@ from oslo_log import log as logging
 from webob import exc
 
 from knob.api import deploy_key as engine
+from knob.common import exception
 from knob.common import serializers
 from knob.common import wsgi
-from knob.common.exception import KnobException
 from knob.objects import gate as gate_obj
 from knob.objects import target as target_obj
 from knob.objects import key as key_obj
 
 LOG = logging.getLogger(__name__)
-MGMT_KEY_PREFIX = 'gate-'
+MGMT_KEY_PREFIX = 'mgmt-key-'
 KEY_STORE_PATH = '/etc/knob/keys/'
 
 class GateController(object):
@@ -94,34 +94,37 @@ class GateController(object):
         # create new key
         key_name = MGMT_KEY_PREFIX + name
         # create key and store at nova DB
-        key = ctx.nova_client.keypairs.create(key_name)
+        key = ctx.nova_client.keypair_create(key_name)
         return key
         
     def _store_keypair(self, ctx, gate_id, key):
         # store private key for further usage
-        stream = open(KEY_STORE_PATH+key['keypair']['name'], 'w')
-        stream.write(key['key_pair']['private_key'])
+        stream = open(KEY_STORE_PATH+key['name'], 'w')
+        stream.write(key['private_key'])
         stream.close()
         
         # DB update: store mgmt key along with gate
         key_obj.Key.create(
-            ctx,dict(name=key['keypair']['name'],
-                     content=key['keypair']['public_key'],
-                     gate=gate_id))
+            ctx,dict(name=key['name'],
+                     content=key['public_key'],
+                     gate_id=gate_id))
         
     def _delete_keypair(self, ctx, name):
         key_name = MGMT_KEY_PREFIX + name
         # remove nova key
-        ctx.nova_client.keypairs.delete(key_name)
+        ctx.nova_client.keypair_delete(key_name)
         
+        print ('deleted key')
         # remove private key file
         key_path = KEY_STORE_PATH+key_name
         os.remove(key_path)
+        print ('deleted private key')
         
         # remove knob key reference
-        key_obj.Key.delete(ctx, name)
+        key_obj.Key.delete_by_name(ctx, name)
+        print ('deleted DB object')
         
-    def _update_security_groups(self, security_group):
+    def _update_security_groups(self, ctx, security_group):
         pass
 
     def create(self, req, body):
@@ -139,8 +142,11 @@ class GateController(object):
             raise exc.HTTPBadRequest('Not supplied required parameter')
  
         # create key
-        key = self._create_keypair(ctx, create_data['name'])
-        create_data['key_name'] = key['keypair']['name']
+        key_class = self._create_keypair(ctx, create_data['name'])
+        key = key_class.to_dict()
+        create_data['key_name'] = key['name']
+        #key = {'name': 'gate-test1'}
+        #create_data['key_name'] = key['name']
         
         # add controller host as 'allowed' to security group once
         self._update_security_groups(ctx, create_data['security_groups'])
@@ -183,7 +189,6 @@ class GateController(object):
         gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
         server_id = gate_ref['server_id']
         fip_id = gate_ref['fip_id']
-        gate_id = gate_ref['id']
         
         # remove server
         #ctx.nova_client.remove_service_vm(server_id)
@@ -191,8 +196,8 @@ class GateController(object):
         # disassociate fip & delete port
         #port_id = ctx.neutron_client.disassociate_fip(fip_id)
 
-        # remove mgmt key pair
-        #self._delete_keypair(ctx,  gate_ref['name'])
+        #remove mgmt key pair
+        self._delete_keypair(ctx,  gate_ref['name'])
         
         # remove gate object from DB
         gate_obj.Gate.delete(ctx, gate_id)
@@ -206,7 +211,7 @@ class GateController(object):
         # verify if target VM exists
         try:
             ctx.nova_client.get_server(data['server_id'])
-        except exc.EntityNotFound:
+        except exception.EntityNotFound:
             return {'targets': None}
         
         # verify if gate exists
@@ -232,7 +237,7 @@ class GateController(object):
         # verify if target VM exists
         try:
             ctx.nova_client.get_server(target_id)
-        except exc.EntityNotFound:
+        except exception.EntityNotFound:
             return {'targets': None}
         
         #verify if gate_id exists
@@ -244,9 +249,12 @@ class GateController(object):
         """List targets on gate."""
         print ('--------list targets on gate: %s' % gate_id)
 
-        ctx = req.context        
+        ctx = req.context
+        print ('Before  DB fetch')
         targets = target_obj.Target.get_all_by_args(ctx, gate_id)
+        print ('After  DB fetch')
         result = [self.format_target(target) for target in targets]
+        print ('After result format')
         return {'targets': result}
     
     def add_key(self, req, gate_id, body):

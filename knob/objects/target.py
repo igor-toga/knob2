@@ -61,8 +61,6 @@ class Target(
 
     @classmethod
     def get_all_by_args(cls, context, gate_id, target_id=None):
-        return cls._from_db_objects(
-            context,
-            db_api.target_get_all_by_args(context,
-                                           gate_id,
-                                           target_id))
+        return [cls._from_db_object(context, cls(), db_target)
+                for db_target in db_api.target_get_all_by_args(
+                    context, gate_id, target_id)]

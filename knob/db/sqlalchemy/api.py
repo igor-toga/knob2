@@ -145,8 +145,9 @@ def target_get_all_by_args(context, gate_id, target_id):
     if target_id is not None:
         return (context.session.query(models.Target).
                 filter_by(gate_id=gate_id).
-                filter_by(target_id=target_id).all())
+                filter_by(server_id=target_id).all())
     else:
+        print ('target filter')
         return (context.session.query(models.Target).
                 filter_by(gate_id=gate_id).all())
 
@@ -199,6 +200,14 @@ def key_get(context, key_id):
                                  key_id)
     return result
 
+
+def key_delete_by_name(context, name):
+    key = (context.session.query(models.Key).
+            filter_by(name=name).one_or_none())
+    if key is not None:
+        session = context.session
+        with session.begin(subtransactions=True):
+            session.delete(key)
 
 
 def key_delete(context, gate_id):

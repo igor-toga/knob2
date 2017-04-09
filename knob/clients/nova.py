@@ -69,6 +69,15 @@ class NovaClient(object):
             raise exception.NotFound('nova object not found')
         return self._client
 
+    def keypair_create(self, key_name):
+        client = self.client()
+        key = client.keypairs.create(key_name)
+        return key
+    
+    def keypair_delete(self, key_name):
+        client = self.client()
+        client.keypairs.delete(key_name)
+
     def create_service_vm(self, data):
         #nics = [{"net-id": net_id, "v4-fixed-ip": ''}]
         
