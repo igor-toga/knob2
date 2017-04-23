@@ -183,6 +183,7 @@ function configure_knob {
     #cp -p $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR
     cp $KNOB_DIR/etc/knob/api-paste.ini $KNOB_CONF_DIR/api-paste.ini
     cp $KNOB_DIR/etc/knob/policy.json $KNOB_CONF_DIR/policy.json
+    mkdir -p $KNOB_CONF_DIR/keys
     sudo cp $KNOB_DIR/knob-api $KNOB_BIN_DIR/knob-api
     sudo cp $KNOB_DIR/knob-manage $KNOB_BIN_DIR/knob-manage
 
@@ -248,10 +249,10 @@ function stop_knob {
 # init_knob() - Initialize databases, etc.
 function init_knob {
     mkdir -p $KNOB_STATE_PATH
-    # (Re)create cinder database
+    # (Re)create knob database
     recreate_database knob
 
-    # Migrate cinder database
+    # Migrate knob database
     $KNOB_BIN_DIR/knob-manage  --config-file $KNOB_CONF db_sync
 }
 

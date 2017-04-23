@@ -86,9 +86,27 @@ class DeployKeyThread(Thread):
         suffix = "%s" % (statuz)
         print(prefix[:MAX_HOST_WIDTH].ljust(MAX_HOST_WIDTH, ' ') + " " + suffix)
 
+    def _prepare_cmd(self, append_mode):
+        key = self.config['key']
+        
+        if append_mode is True:
+            cmd = "if ! (grep '%s' %s/%s > /dev/null 2>&1) ; then \
+                          echo '%s' >> %s/%s ; chmod 600 %s/%s ; fi" % (
+                        key, SSH_DIR, AUTHORIZED_KEYS,
+                        key, SSH_DIR, AUTHORIZED_KEYS,
+                        SSH_DIR, AUTHORIZED_KEYS)
+        else:
+            cmd = "grep -E '%s' > /tmp/keys ; \
+                            mv /tmp/keys %s/%s ; chmod 600 %s/%s" % (
+                    key, SSH_DIR, AUTHORIZED_KEYS,
+                    SSH_DIR, AUTHORIZED_KEYS)
+        print (cmd)
+        return cmd
+        
     def _deploy_key(self, server, username):
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        print(self.config)
         try:
             ssh_client.connect(
                 server,
@@ -96,45 +114,55 @@ class DeployKeyThread(Thread):
                 key_filename=self.config['private_key_file'],
                 port=SSH_PORT,
                 timeout=TIMEOUT_SECONDS)
-            sftp_client = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
+            print('before from transport')
+            #sftp_client = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
+            print('after from transport')
         except socket.error:
             return CONNECTION_FAILURE
         except paramiko.AuthenticationException:
             return AUTH_FAILURE
         except paramiko.SSHException: # TODO: retry this type of failure?
             return SSH_FAILURE
-        script = SMART_REMOVE_SCRIPT
+        #script = SMART_REMOVE_SCRIPT
+        append_mode = False
         if 'append' in self.config:
-            script = SMART_APPEND_SCRIPT
-        try:
-            sftp_client.put(script, script)
-        except IOError:
-            return IO_FAILURE
-        _, stdout, stderr = ssh_client.exec_command('/bin/sh %s' % script)
+            #script = SMART_APPEND_SCRIPT
+            append_mode = True
+        cmd = self._prepare_cmd(append_mode)
+        #try:
+            #print('before put: %s' % script)
+            #sftp_client.put(script, script)
+            #print('after put: %s' % script)
+        #except IOError:
+        #    return IO_FAILURE
+        #_, stdout, stderr = ssh_client.exec_command('/bin/sh %s' % script)
+        _, stdout, stderr = ssh_client.exec_command('%s' % cmd)
         if not stdout.channel.recv_exit_status() == 0:
             print (not stdout.channel.recv_exit_status())
             print ("out: %s\n err: %s\n" %(stdout.read().strip(), stderr.read().strip()))
             return UNKNOWN_ERROR
-        sftp_client.remove(script)
+        #print('before remove: %s' % script)
+        #sftp_client.remove(script)
+        #print('after remove: %s' % script)
         return stdout.read().strip()
 
     def run(self):
-        while True:
-            line = self.queue.get()
-            # support either "host" or "user@host" formats
-            words = line.split("@")
-            username = self.config['username']
-            server = words[0]
-            if len(words) > 1:
-                username = words[0]
-                server = words[1]
-            try:
-                statuz = self._deploy_key(server, username)
-            except:
-                statuz = GENERAL_FAILURE
-                # TODO: log a stack trace
-            self._print_status(server, username, statuz)
-            self.queue.task_done()
+        #while True:
+        line = self.queue.get()
+        # support either "host" or "user@host" formats
+        words = line.split("@")
+        username = self.config['username']
+        server = words[0]
+        if len(words) > 1:
+            username = words[0]
+            server = words[1]
+        #try:
+        statuz = self._deploy_key(server, username)
+        #except:
+        #    statuz = GENERAL_FAILURE
+            # TODO: log a stack trace
+        self._print_status(server, username, statuz)
+        self.queue.task_done()
 
 
 
@@ -199,7 +227,7 @@ def cleanup():
 # Main flow begins here
 ######################################################################
 def deploy_key(config):
-    setup()
+    setup(config)
     queue = Queue(maxsize=10)
 
     if not config['private_key_file']:

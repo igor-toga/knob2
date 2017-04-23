@@ -57,12 +57,14 @@ class Key(
                         
     @classmethod
     def get_all_by_args(cls, context, gate_id, key_id=None):
-        return cls._from_db_objects(
-            context,
-            db_api.key_get_all_by_args(context,
-                                           gate_id,
-                                           key_id))
+        return [cls._from_db_object(context, cls(), db_key)
+                for db_key in db_api.key_get_all_by_args(
+                    context, gate_id, key_id)]
 
     @classmethod
     def delete_by_name(cls, context, key_name):
         db_api.key_delete_by_name(context, key_name)
+        
+    @classmethod
+    def delete(cls, context, key_id):
+        db_api.key_delete(context, key_id)

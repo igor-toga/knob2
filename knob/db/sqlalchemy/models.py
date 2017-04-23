@@ -85,6 +85,8 @@ class Key(BASE, KnobBase):
     __tablename__ = 'gate_keys'
     id = Column(String(36), primary_key=True, 
                 default=lambda: str(uuid.uuid4()))
+                #default='12345678-2c70-4f76-ba0b-1f6ef31e7930')
+    #id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String(length=255))
     content = Column(String(length=1024))
     gate_id = Column(Integer, ForeignKey('gates.id', name='gate_fk'),index=True,nullable=False)

@@ -145,24 +145,24 @@ class GateController(object):
         key_class = self._create_keypair(ctx, create_data['name'])
         key = key_class.to_dict()
         create_data['key_name'] = key['name']
-        #key = {'name': 'gate-test1'}
+        #key = {'name': 'mgmt-key-gate1'}
         #create_data['key_name'] = key['name']
         
         # add controller host as 'allowed' to security group once
         self._update_security_groups(ctx, create_data['security_groups'])
         
         # create port
-        port_id = 'e89f6467-00b7-42a3-8b03-8107bd5f428c'
-        #port_id = ctx.neutron_client.create_port(create_data)
+        #port_id = 'e89f6467-00b7-42a3-8b03-8107bd5f428c'
+        port_id = ctx.neutron_client.create_port(create_data)
         create_data['port-id'] = port_id
         
         # update network configuration with given port id
-        server_id = '74dcc644-527b-4f77-839f-70463126f0f1'
-        #server_id = ctx.nova_client.create_service_vm(create_data)
+        #server_id = 'c8c845a1-f074-4973-9b91-91f12962a72e'
+        server_id = ctx.nova_client.create_service_vm(create_data)
 
         # create fip and to attach to given port
-        fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
-        #fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
+        #fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
+        fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
 
         # DB update: crete new gate 
         gate_ref = gate_obj.Gate.create(
@@ -250,11 +250,8 @@ class GateController(object):
         print ('--------list targets on gate: %s' % gate_id)
 
         ctx = req.context
-        print ('Before  DB fetch')
         targets = target_obj.Target.get_all_by_args(ctx, gate_id)
-        print ('After  DB fetch')
         result = [self.format_target(target) for target in targets]
-        print ('After result format')
         return {'targets': result}
     
     def add_key(self, req, gate_id, body):
@@ -269,13 +266,13 @@ class GateController(object):
         key_ref = key_obj.Key.create(
             ctx,dict(name=data['name'],
                      content=data['key_content'],
-                     gate=gate_id))
+                     gate_id=gate_id))
         
         gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
         server_id = gate_ref['server_id']
-        server_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
+        server_ip = ctx.nova_client.get_ip(server_id, 'private', 4,'floating')
         
-        key_name = MGMT_KEY_PREFIX + gate_ref['name']
+        key_name = KEY_STORE_PATH + MGMT_KEY_PREFIX + gate_ref['name']
         config = {
             'private_key_file': key_name,
             'username': 'cirros',
@@ -287,7 +284,7 @@ class GateController(object):
         
 
         LOG.debug('Key record: %s is created successfully' % key_ref.name)
-        result = self.format_target(key_ref) 
+        result = self.format_key(key_ref) 
         return {'keys': result}
         
     def remove_key(self, req, gate_id, key_id):
@@ -304,7 +301,7 @@ class GateController(object):
             server_id = gate_ref['server_id']
             server_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
             
-            key_name = MGMT_KEY_PREFIX + gate_ref['name']
+            key_name = KEY_STORE_PATH + MGMT_KEY_PREFIX + gate_ref['name']
             config = {
                 'private_key_file': key_name,
                 'username': 'cirros',
@@ -318,7 +315,7 @@ class GateController(object):
         """List keys on gate."""
         print ('--------list keys on gate: %s' % gate_id)
 
-        ctx = req.context        
+        ctx = req.context
         keys = key_obj.Key.get_all_by_args(ctx, gate_id)
         result = [self.format_key(key) for key in keys]
         return {'keys': result}

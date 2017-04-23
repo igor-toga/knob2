@@ -163,7 +163,7 @@ class API(wsgi.Router):
                     },
                     {
                         'name': 'list_keys',
-                        'url': '/{gate_name}/keys',
+                        'url': '/{gate_id}/keys',
                         'action': 'list_keys',
                         'method': 'GET'
                     },

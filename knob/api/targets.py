@@ -12,13 +12,17 @@
 #    under the License.
 
 from webob import exc
-
+from oslo_log import log as logging
 #from knob.api.openstack.v1 import util
 from knob.common import serializers
 from knob.common import wsgi
 from knob.common import exception
 from knob.objects import gate as gate_obj
 from knob.objects import target as target_obj
+
+from knob.common.i18n import _LW
+
+LOG = logging.getLogger(__name__)
 
 
 class TargetController(object):
@@ -35,27 +39,19 @@ class TargetController(object):
     
     def format_config(self, data):
         config = """
-        Host %s
-          HostName %s
-          User ubuntu
-          ForwardAgent yes
-          IdentityFile %s
-        
-        Host %s
-          HostName %s
-          User ubuntu
-          ForwardAgent yes
-          IdentityFile %s
-          ProxyCommand ssh %s -W %h:%p
-        """ % (
-            data['gate_name'],
-            data['gate_ip'],
-            data['gate_key_file'],
+Host %s
+  HostName %s
+  User %s
+  ForwardAgent yes
+  IdentityFile %s
+  ProxyCommand ssh -i %s cirros@%s nc %%h %%p""" % (
             data['target_name'],
             data['target_ip'],
             data['user'],
             data['target_key_file'],
-            data['gate_name']
+            data['gate_key_file'],
+            data['gate_ip'],
+            
             )
         return config
     
@@ -67,17 +63,22 @@ class TargetController(object):
             'target_id', 'target_key_file'))
  
         ctx = req.context
-        target_ip = ctx.nova_client.get_ip(data['target_id'], 'private', 4)
-        target_ref = target_obj.Target.get_by_id(ctx, data['target_id'])
+        try:
+            target_ip = ctx.nova_client.get_ip(data['target_id'], 'private', 4, 'fixed')
+            target_ref = target_obj.Target.get_by_id(ctx, data['target_id'])
         
-        gate_ref = gate_obj.Gate.get_by_id(ctx, data['gate_id'])
-        server_id = gate_ref['server_id']
-        gate_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
-        # complete data collection with info from objects
-        data['target_ip'] = target_ip
-        data['target_name'] = target_ref['name']
-        data['gate_ip'] = gate_ip
-        data['gate_name'] = gate_ref['name']
+            gate_ref = gate_obj.Gate.get_by_id(ctx, data['gate_id'])
+            server_id = gate_ref['server_id']
+            gate_ip = ctx.nova_client.get_ip(server_id, 'private', 4, 'floating')
+            # complete data collection with info from objects
+            data['target_ip'] = target_ip
+            data['target_name'] = target_ref['name']
+            data['gate_ip'] = gate_ip
+            data['gate_name'] = gate_ref['name']
+        except exception.EntityNotFound as exc:
+            LOG.warning(_LW("Target %(name)s not found "),
+                        {'name': exc.name})
+            return None
         
         config = self.format_config(data)
         
