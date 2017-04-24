@@ -58,6 +58,10 @@ class NeutronClient(object):
         #self.client().update_floatingip(fip_id, request)
         self.client().delete_floatingip(fip_id)
     
+    def delete_port(self, port_id):
+        """delete given port"""
+        self.client().delete_port(port_id)
+    
     def create_port(self, create_data):
         print ('netinfo:')
         print (create_data)

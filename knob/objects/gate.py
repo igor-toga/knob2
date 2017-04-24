@@ -31,6 +31,7 @@ class Gate(
         'id': fields.IntegerField(),
         'name': fields.StringField(),
         'fip_id': fields.StringField(),
+        'port_id': fields.StringField(),
         'server_id': fields.StringField(),
         'tenant_id': fields.StringField(),
         'created_at': fields.DateTimeField(read_only=True),

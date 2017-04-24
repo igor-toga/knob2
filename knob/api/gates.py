@@ -48,6 +48,7 @@ class GateController(object):
             'name': gate.name,
             'server_id': gate.server_id,
             'fip_id': gate.fip_id,
+            'port_id': gate.port_id,
             'tenant_id': gate.tenant_id,
             'created_at': gate.created_at 
             }
@@ -114,15 +115,12 @@ class GateController(object):
         # remove nova key
         ctx.nova_client.keypair_delete(key_name)
         
-        print ('deleted key')
         # remove private key file
         key_path = KEY_STORE_PATH+key_name
         os.remove(key_path)
-        print ('deleted private key')
         
         # remove knob key reference
-        key_obj.Key.delete_by_name(ctx, name)
-        print ('deleted DB object')
+        key_obj.Key.delete_by_name(ctx, key_name)
         
     def _update_security_groups(self, ctx, security_group):
         pass
@@ -133,7 +131,7 @@ class GateController(object):
         create_data = dict((k, body.get(k)) for k in (
             'name', 'net_id', 'public_net_id'))
         create_data['flavor'] = 'm1.tiny'
-        create_data['image'] = 'cirros-0.3.5-x86_64-disk'
+        create_data['image'] = 'cirros-0.3.4-x86_64-uec'
         create_data['security_groups'] = 'default'
         
         ctx = req.context
@@ -169,6 +167,7 @@ class GateController(object):
                 ctx,dict(name=create_data['name'],
                              server_id=server_id,
                              fip_id=fip_id,
+                             port_id=port_id,
                              tenant_id=''))
         
         # store keypair for further use
@@ -189,12 +188,15 @@ class GateController(object):
         gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
         server_id = gate_ref['server_id']
         fip_id = gate_ref['fip_id']
-        
+        port_id = gate_ref['port_id']
         # remove server
-        #ctx.nova_client.remove_service_vm(server_id)
+        ctx.nova_client.remove_service_vm(server_id)
         
         # disassociate fip & delete port
-        #port_id = ctx.neutron_client.disassociate_fip(fip_id)
+        ctx.neutron_client.disassociate_fip(fip_id)
+        
+        # remove neutron port explicitly
+        ctx.neutron_client.delete_port(port_id)
 
         #remove mgmt key pair
         self._delete_keypair(ctx,  gate_ref['name'])
@@ -299,7 +301,7 @@ class GateController(object):
             
             gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
             server_id = gate_ref['server_id']
-            server_ip = ctx.nova_client.get_ip(server_id, 'private', 4)
+            server_ip = ctx.nova_client.get_ip(server_id, 'private', 4,'floating')
             
             key_name = KEY_STORE_PATH + MGMT_KEY_PREFIX + gate_ref['name']
             config = {

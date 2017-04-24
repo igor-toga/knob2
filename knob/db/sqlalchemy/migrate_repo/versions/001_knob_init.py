@@ -42,6 +42,7 @@ def define_tables(meta):
         Column('id', Integer, primary_key=True, nullable=False),
         Column('name', String(length=255), nullable=False),
         Column('fip_id', String(length=36), nullable=False),
+        Column('port_id', String(length=36), nullable=False),
         Column('server_id', String(length=36), nullable=False),
         Column('tenant_id', String(length=36)),
         mysql_engine='InnoDB'

@@ -96,9 +96,10 @@ class DeployKeyThread(Thread):
                         key, SSH_DIR, AUTHORIZED_KEYS,
                         SSH_DIR, AUTHORIZED_KEYS)
         else:
-            cmd = "grep -E '%s' > /tmp/keys ; \
+            cmd = "grep -E '%s' %s/%s > /tmp/keys ; \
                             mv /tmp/keys %s/%s ; chmod 600 %s/%s" % (
                     key, SSH_DIR, AUTHORIZED_KEYS,
+                    SSH_DIR, AUTHORIZED_KEYS,
                     SSH_DIR, AUTHORIZED_KEYS)
         print (cmd)
         return cmd

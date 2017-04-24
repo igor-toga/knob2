@@ -72,6 +72,7 @@ class Gate(BASE, KnobBase):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String(255), nullable=False)  # , ForeignKey('hosts.id'))
     fip_id = Column(String(36), nullable=False)
+    port_id = Column(String(36), nullable=False)
     server_id = Column(String(36), nullable=False)
     tenant_id = Column(String(36))
     

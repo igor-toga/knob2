@@ -44,6 +44,8 @@ Host %s
   User %s
   ForwardAgent yes
   IdentityFile %s
+  StrictHostKeyChecking no
+  UserKnownHostsFile=/dev/null
   ProxyCommand ssh -i %s cirros@%s nc %%h %%p""" % (
             data['target_name'],
             data['target_ip'],

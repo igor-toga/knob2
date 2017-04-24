@@ -83,10 +83,10 @@ class NovaClient(object):
         
         client = self.client()  
         # verify keypair
-        key=data['key']
-        if client.keypairs.get(key) is None:
+        key_name=data['key_name']
+        if client.keypairs.get(key_name) is None:
             LOG.warning(_LW('Provided key with name (%(name)s)'), 
-                        {'name': key})
+                        {'name': key_name})
             return None
         
         image = client.images.find(name=data['image'])
@@ -100,7 +100,7 @@ class NovaClient(object):
                 flavor=flavor, 
                 nics=nics,
                 security_groups=[data['security_groups']], 
-                key_name=key)
+                key_name=key_name)
             print ('returned: %s' % server_ref)
         finally:
             if server_ref is not None:
