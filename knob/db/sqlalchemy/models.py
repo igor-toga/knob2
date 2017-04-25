@@ -76,10 +76,6 @@ class Gate(BASE, KnobBase):
     server_id = Column(String(36), nullable=False)
     tenant_id = Column(String(36))
     
-    keys = relationship("Key", backref="gate")
-    targets = relationship("Target", backref="gate")
-
-    
 class Key(BASE, KnobBase):
     """Represents a Ssh associates that allowed to work with service."""
 
@@ -92,8 +88,9 @@ class Key(BASE, KnobBase):
     content = Column(String(length=1024))
     gate_id = Column(Integer, ForeignKey('gates.id', name='gate_fk'),index=True,nullable=False)
     
-    #gate = relationship("Gate", backref="keys")
-
+    gate = relationship("Gate", backref=backref("keys", cascade="all, delete-orphan"))
+    
+    
 class Target(BASE, KnobBase):
     """Represents a Ssh targets on for specified service."""
 
@@ -104,7 +101,7 @@ class Target(BASE, KnobBase):
     routable = Column(Boolean)
     #_table_args__ = (PrimaryKeyConstraint(server_id, gate_id),)
     
-    #gate = relationship("Gate", backref="targets")
+    gate = relationship("Gate", backref=backref("targets", cascade="all, delete-orphan"))
 
 
 def register_models():
