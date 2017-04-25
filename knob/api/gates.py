@@ -129,10 +129,7 @@ class GateController(object):
         """Create a new SSH gate."""        
         print ('------------in create ---------------------- ')
         create_data = dict((k, body.get(k)) for k in (
-            'name', 'net_id', 'public_net_id'))
-        create_data['flavor'] = 'm1.tiny'
-        create_data['image'] = 'cirros-0.3.4-x86_64-uec'
-        create_data['security_groups'] = 'default'
+            'name', 'net_id', 'public_net_id', 'flavor', 'image', 'security_groups'))
         
         ctx = req.context
         

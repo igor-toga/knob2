@@ -46,7 +46,8 @@ Host %s
   IdentityFile %s
   StrictHostKeyChecking no
   UserKnownHostsFile=/dev/null
-  ProxyCommand ssh -i %s cirros@%s nc %%h %%p""" % (
+  ProxyCommand ssh -i %s -o StrictHostKeyChecking=no cirros@%s nc %%h %%p
+  """ % (
             data['target_name'],
             data['target_ip'],
             data['user'],
