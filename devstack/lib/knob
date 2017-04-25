@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+
+# install_client - Collect source and prepare
+function install_client {
+    git_clone $KNOBCLIENT_REPO $KNOBCLIENT_DIR $KNOBCLIENT_BRANCH
+    setup_develop $KNOBCLIENT_DIR
+}
+
+# cleanup_barbican - Remove residual data files, anything left over from previous
+# runs that a clean run would need to clean up
+function cleanup_knob {
+    :
+}
+
+
+# configure_() - Set config files, create data dirs, etc
+function configure_ {
+    sudo install -d -o $STACK_USER -m 755 $KNOB_CONF_DIR
+
+    #cp -p $KNOB_DIR/etc//policy.json $KNOB_CONF_DIR
+    cp $KNOB_DIR/etc//api-paste.ini $KNOB_CONF_DIR/api-paste.ini
+    cp $KNOB_DIR/etc//policy.json $KNOB_CONF_DIR/policy.json
+    mkdir -p $KNOB_CONF_DIR/keys
+    sudo cp $KNOB_DIR/-api $KNOB_BIN_DIR/-api
+    sudo cp $KNOB_DIR/-manage $KNOB_BIN_DIR/-manage
+
+    rm -f $KNOB_CONF
+
+
+    iniset $KNOB_CONF DEFAULT auth_strategy keystone
+    iniset $KNOB_CONF DEFAULT rootwrap_config "$KNOB_CONF_DIR/rootwrap.conf"
+    iniset $KNOB_CONF DEFAULT state_path $KNOB_STATE_PATH
+    iniset $KNOB_CONF oslo_concurrency lock_path $KNOB_STATE_PATH
+    iniset $KNOB_CONF DEFAULT periodic_interval $KNOB_PERIODIC_INTERVAL
+    iniset $KNOB_CONF DEFAULT os_region_name "$REGION_NAME"
+    iniset $KNOB_CONF database connection `database_connection_url `
+
+    # Format logging
+    # Set req-id, project-name and resource in log format
+    iniset $KNOB_CONF DEFAULT logging_context_format_string "%(asctime)s.%(msecs)03d %(levelname)s %(name)s [%(request_id)s %(project_name)s] %(resource)s%(message)s"
+
+    # Set os_privileged_user credentials (used for os-assisted-snapshots)
+    iniset $KNOB_CONF DEFAULT os_privileged_user_name nova
+    iniset $KNOB_CONF DEFAULT os_privileged_user_password "$SERVICE_PASSWORD"
+    iniset $KNOB_CONF DEFAULT os_privileged_user_tenant "$SERVICE_PROJECT_NAME"
+    iniset $KNOB_CONF DEFAULT graceful_shutdown_timeout "$SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT"
+
+
+    create__conf_neutron
+
+}
+
+function create__conf_neutron {
+    iniset $KNOB_CONF DEFAULT use_neutron True
+    iniset $KNOB_CONF neutron auth_type "password"
+    iniset $KNOB_CONF neutron auth_url "$SERVICE_PROTOCOL://$SERVICE_HOST:$KEYSTONE_AUTH_PORT/v3"
+    iniset $KNOB_CONF neutron username "$Q_ADMIN_USERNAME"
+    iniset $KNOB_CONF neutron password "$SERVICE_PASSWORD"
+    iniset $KNOB_CONF neutron user_domain_name "Default"
+    iniset $KNOB_CONF neutron project_name "$SERVICE_PROJECT_NAME"
+    iniset $KNOB_CONF neutron project_domain_name "Default"
+    iniset $KNOB_CONF neutron auth_strategy "$Q_AUTH_STRATEGY"
+    iniset $KNOB_CONF neutron region_name "$REGION_NAME"
+    iniset $KNOB_CONF neutron url "${SERVICE_PROTOCOL}://$SERVICE_HOST:$Q_PORT"
+}
+
+
+# start_() - Start running processes, including screen
+function start_ {
+    local service_port=$KNOB_SERVICE_PORT
+    local service_protocol=$SERVICE_PROTOCOL
+
+    run_process k-api "$KNOB_BIN_DIR/-api --config-file $KNOB_CONF"
+    #echo "Waiting for Knob API to start..."
+    #if ! wait_for_service $SERVICE_TIMEOUT $service_protocol://$SERVICE_HOST:$service_port; then
+    #    die $LINENO "k-shh did not start"
+    #fi
+    }
+
+# stop_() - Stop running processes
+function stop_ {
+    stop_process k-api
+}
+
+
+# init_() - Initialize databases, etc.
+function init_ {
+    mkdir -p $KNOB_STATE_PATH
+    # (Re)create  database
+    recreate_database 
+
+    # Migrate  database
+    $KNOB_BIN_DIR/-manage  --config-file $KNOB_CONF db_sync
+}
+
+function create__accounts {
+
+   create_service_user ""
+
+   get_or_create_service "" "ssh" "Knob Service"
+   get_or_create_endpoint \
+        "ssh" \
+        "$REGION_NAME" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/" \
+        "$SERVICE_PROTOCOL://$SERVICE_HOST:$KNOB_SERVICE_PORT/"
+}
+
+
+# Restore xtrace
+$_XTRACE_KNOB
+
+# Tell emacs to use shell-script-mode
+## Local variables:
+## mode: shell-script
+## End:

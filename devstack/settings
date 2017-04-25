@@ -1,0 +1,53 @@
+# settings file for knob
+
+
+# Set Keystone interface configuration
+#KEYSTONE_AUTH_PORT=${KEYSTONE_AUTH_PORT:-35357}
+#KEYSTONE_AUTH_PORT_INT=${KEYSTONE_AUTH_PORT_INT:-35358}
+
+# Public facing bits
+#KEYSTONE_SERVICE_PORT=${KEYSTONE_SERVICE_PORT:-5000}
+#KEYSTONE_SERVICE_PORT_INT=${KEYSTONE_SERVICE_PORT_INT:-5001}
+
+# Default Neutron Port
+Q_PORT=${Q_PORT:-9696}
+Q_PORT_INT=${Q_PORT_INT:-19696}
+Q_ADMIN_USERNAME=${Q_ADMIN_USERNAME:-neutron}
+Q_AUTH_STRATEGY=${Q_AUTH_STRATEGY:-keystone}
+#--------------------------------------------------------------------------------------
+
+# Save trace setting
+_XTRACE_KNOB=$(set +o | grep xtrace)
+set +o xtrace
+
+
+# Defaults
+# --------
+
+# Set Knob repository
+KNOB_REPO=${KNOB_REPO:-https://github.com/igor-toga/knob2.git}
+KNOB_BRANCH=${KNOB_BRANCH:-master}
+
+# Set client library repository
+KNOBCLIENT_REPO=${KNOBCLIENT_REPO:-https://github.com/igor-toga/knobclient.git}
+KNOBCLIENT_BRANCH=${KNOBCLIENT_BRANCH:-master}
+
+
+KNOB_DIR=$DEST/knob
+KNOB_BIN_DIR="/usr/local/bin"
+KNOBCLIENT_DIR=$DEST/python-knobclient
+
+
+KNOB_STATE_PATH=${KNOB_STATE_PATH:=$DATA_DIR/knob}
+KNOB_AUTH_CACHE_DIR=${KNOB_AUTH_CACHE_DIR:-/var/cache/knob}
+KNOB_CONF_DIR=/etc/knob
+KNOB_CONF=$KNOB_CONF_DIR/knob.conf
+
+
+KNOB_SERVICE_PORT=${KNOB_SERVICE_PORT:-2712}
+KNOB_SERVICE_PORT_INT=${KNOB_SERVICE_PORT_INT:-12712}
+
+KNOB_PERIODIC_INTERVAL=${KNOB_PERIODIC_INTERVAL:-60}
+KNOB_USE_MOD_WSGI=${KNOB_USE_MOD_WSGI:-False}
+
+enable_service knob
