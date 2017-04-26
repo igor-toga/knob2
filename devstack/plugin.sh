@@ -3,7 +3,11 @@
 
 # check for service enabled
 if is_service_enabled knob; then
-
+    if [[ "$1" == "source" || "`type -t install_knob`" != 'function' ]]; then
+        # Initial source
+        source $KNOB_DIR/devstack/lib/knob
+    fi
+    
     if [[ "$1" == "stack" && "$2" == "pre-install" ]]; then
         # Set up system services
         echo_summary "Configuring system services Knob - nothing to do"
@@ -17,6 +21,7 @@ if is_service_enabled knob; then
     elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
         # Configure after the other layer 1 and 2 services have been configured
         echo_summary "Configuring Knob"
+        create_knob_accounts
         configure_knob
 
     elif [[ "$1" == "stack" && "$2" == "extra" ]]; then
