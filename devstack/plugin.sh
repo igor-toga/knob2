@@ -16,6 +16,7 @@ if is_service_enabled knob; then
     elif [[ "$1" == "stack" && "$2" == "install" ]]; then
         # Perform installation of service source
         echo_summary "Installing Knob"
+        setup_develop $KNOB_DIR
         install_knobclient
 
     elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
