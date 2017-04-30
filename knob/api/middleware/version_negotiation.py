@@ -48,7 +48,6 @@ class VersionNegotiationFilter(wsgi.Middleware):
                "%(accept)s" % {'method': req.method,
                                'path': req.path, 'accept': req.accept})
         LOG.debug(msg)
-
         # If the request is for /versions, just return the versions container
         if req.path_info_peek() in ("versions", ""):
             return self.versions_app

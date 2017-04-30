@@ -10,6 +10,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import datetime
 import os
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -33,55 +34,72 @@ from knob.clients import nova
 LOG = logging.getLogger(__name__)
 
 
-class RequestContext(context.RequestContext):
+class MyRequestContext(context.RequestContext):
     """Stores information about the security context.
 
     Under the security context the user accesses the system, as well as
     additional request information.
     """
-
-    def __init__(self, roles=None, is_admin=None, read_only=False,
-                 show_deleted=False, overwrite=True, request_id=None,
+    def __init__(self, user_id=None, tenant_id=None, is_admin=None, roles=None,
+                 timestamp=None, request_id=None, tenant_name=None,
+                 user_name=None, overwrite=True, auth_token=None,
                  **kwargs):
-        """Initialisation of the request context.
-
+        """Object initialization.
         :param overwrite: Set to False to ensure that the greenthread local
             copy of the index is not overwritten.
+        :param kwargs: Extra arguments that might be present, but we ignore
+            because they possibly came in from older rpc messages.
         """
-        super(RequestContext, self).__init__(is_admin=is_admin,
-                                             read_only=read_only,
-                                             show_deleted=show_deleted,
-                                             request_id=request_id,
-                                             roles=roles,
-                                             overwrite=overwrite,
-                                             **kwargs)
-
-        
-        
+        super(MyRequestContext, self).__init__(auth_token=auth_token,
+                                          user=user_id, tenant=tenant_id,
+                                          is_admin=is_admin,
+                                          request_id=request_id,
+                                          overwrite=overwrite,
+                                          roles=roles)
+        self.user_name = user_name
+        self.tenant_name = tenant_name
         self._session = None
         self._neutron_client = None
         self._barbican_client = None
         self._nova_client = None
-        auth = v3.Password(auth_url=os.environ['OS_AUTH_URL'],
-                           username=os.environ['OS_USERNAME'],
-                           password=os.environ['OS_PASSWORD'],
-                           project_name=os.environ['OS_PROJECT_NAME'],
-                           user_domain_id=os.environ['OS_USER_DOMAIN_ID'],
-                           project_domain_name=os.environ['OS_PROJECT_DOMAIN_ID'])
         
-        # sess = session.Session(auth=auth, verify='/path/to/ca.cert')
-        self._keystone_session = session.Session(auth=auth, verify=False)
         self.policy = policy.Enforcer()
 
-        if is_admin is None:
-            self.is_admin = self.policy.check_is_admin(self)
-        else:
-            self.is_admin = is_admin
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        self.timestamp = timestamp
+        #if self.is_admin is None:
+        #    print('in context before policy')
+        #    self.is_admin = policy.check_is_admin(self)
+        #else:
+        #    self.is_admin = is_admin
+            
+        if auth_token is not None:
+            auth_url = 'http://172.0.0.102:5000/v3'
+            print('auth_token %s' % auth_token)
+            auth = v3.Token(auth_url, token=auth_token)
+            self._keystone_session = session.Session(auth=auth, verify=False)
+            print ('created keystone session')
+                    
+    @property
+    def project_id(self):
+        return self.tenant
 
-        # context scoped cache dict where the key is a class of the type of
-        # object being cached and the value is the cache implementation class
-        self._object_cache = {}
+    @property
+    def tenant_id(self):
+        return self.tenant
 
+    @tenant_id.setter
+    def tenant_id(self, tenant_id):
+        self.tenant = tenant_id
+
+    @property
+    def user_id(self):
+        return self.user
+
+    @user_id.setter
+    def user_id(self, user_id):
+        self.user = user_id
 
     @property
     def session(self):
@@ -109,14 +127,14 @@ class RequestContext(context.RequestContext):
 
 
 def get_admin_context(show_deleted=False):
-    return RequestContext(is_admin=True, show_deleted=show_deleted)
+    return MyRequestContext(is_admin=True, show_deleted=show_deleted)
 
 
 class ContextMiddleware(wsgi.Middleware):
 
     def __init__(self, app, conf, **local_conf):
         # Determine the context class to use
-        self.ctxcls = RequestContext
+        self.ctxcls = MyRequestContext
         if 'context_class' in local_conf:
             self.ctxcls = importutils.import_class(local_conf['context_class'])
 
@@ -134,10 +152,14 @@ class ContextMiddleware(wsgi.Middleware):
         req.context = self.ctxcls.from_environ(
             environ,
             request_id=req_id)
+        print ('context')
+        print(req.context)
 
 
 def ContextMiddleware_filter_factory(global_conf, **local_conf):
     """Factory method for paste.deploy."""
+    
+    
     conf = global_conf.copy()
     conf.update(local_conf)
 
