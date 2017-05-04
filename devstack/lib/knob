@@ -33,7 +33,6 @@ function configure_knob {
     iniset $KNOB_CONF DEFAULT state_path $KNOB_STATE_PATH
     iniset $KNOB_CONF oslo_concurrency lock_path $KNOB_STATE_PATH
     iniset $KNOB_CONF DEFAULT periodic_interval $KNOB_PERIODIC_INTERVAL
-    iniset $KNOB_CONF DEFAULT os_region_name "$REGION_NAME"
     iniset $KNOB_CONF database connection `database_connection_url knob`
 
     # Format logging
@@ -41,28 +40,23 @@ function configure_knob {
     iniset $KNOB_CONF DEFAULT logging_context_format_string "%(asctime)s.%(msecs)03d %(levelname)s %(name)s [%(request_id)s %(project_name)s] %(resource)s%(message)s"
 
     # Set os_privileged_user credentials (used for os-assisted-snapshots)
-    iniset $KNOB_CONF DEFAULT os_privileged_user_name nova
-    iniset $KNOB_CONF DEFAULT os_privileged_user_password "$SERVICE_PASSWORD"
-    iniset $KNOB_CONF DEFAULT os_privileged_user_tenant "$SERVICE_PROJECT_NAME"
     iniset $KNOB_CONF DEFAULT graceful_shutdown_timeout "$SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT"
 
 
-    create_knob_conf_neutron
+    create_knob_conf_keystone
 
 }
 
-function create_knob_conf_neutron {
-    iniset $KNOB_CONF DEFAULT use_neutron True
-    iniset $KNOB_CONF neutron auth_type "password"
-    iniset $KNOB_CONF neutron auth_url "$SERVICE_PROTOCOL://$SERVICE_HOST:$KEYSTONE_AUTH_PORT/v3"
-    iniset $KNOB_CONF neutron username "$Q_ADMIN_USERNAME"
-    iniset $KNOB_CONF neutron password "$SERVICE_PASSWORD"
-    iniset $KNOB_CONF neutron user_domain_name "Default"
-    iniset $KNOB_CONF neutron project_name "$SERVICE_PROJECT_NAME"
-    iniset $KNOB_CONF neutron project_domain_name "Default"
-    iniset $KNOB_CONF neutron auth_strategy "$Q_AUTH_STRATEGY"
-    iniset $KNOB_CONF neutron region_name "$REGION_NAME"
-    iniset $KNOB_CONF neutron url "${SERVICE_PROTOCOL}://$SERVICE_HOST:$Q_PORT"
+function create_knob_conf_keystone {
+    iniset $KNOB_CONF keystone auth_type "password"
+    iniset $KNOB_CONF keystone auth_url "$SERVICE_PROTOCOL://$SERVICE_HOST:$KEYSTONE_AUTH_PORT/v3"
+    iniset $KNOB_CONF keystone username "$OS_USERNAME"
+    iniset $KNOB_CONF keystone password "$SERVICE_PASSWORD"
+    iniset $KNOB_CONF keystone user_domain_name "Default"
+    iniset $KNOB_CONF keystone project_name "$SERVICE_PROJECT_NAME"
+    iniset $KNOB_CONF keystone project_domain_name "Default"
+    iniset $KNOB_CONF keystone auth_strategy "$Q_AUTH_STRATEGY"
+    iniset $KNOB_CONF keystone region_name "$REGION_NAME"
 }
 
 

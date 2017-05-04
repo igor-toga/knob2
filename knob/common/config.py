@@ -53,13 +53,6 @@ default_client_opts = [
                 default=False,
                 help=_("If set, then the server's certificate will not "
                        "be verified.")),
-    cfg.StrOpt('auth_url',
-               default='',
-               help=_('Unversioned keystone url in format like'
-                      ' http://0.0.0.0:35357/v3')),
-    cfg.StrOpt('os_privileged_user_password',
-               default='',
-               help=_('Privilidged user password')),
    cfg.IntOpt('client_retry_limit',
                default=2,
                help=_('Number of times to retry when a client encounters an '
@@ -77,12 +70,23 @@ default_client_opts = [
                       'It is not necessarily a hostname, FQDN, '
                       'or IP address.'))]
 
+keystone_group = cfg.OptGroup('keystone')
+keystone_opts = [
+    cfg.StrOpt('auth_url',
+               default='',
+               help=_('Unversioned keystone url in format like'
+                      ' http://0.0.0.0:35357/v3')),
+    cfg.StrOpt('password',
+               default='',
+               help=_('Privilidged user password'))]
 
 def list_opts():
     yield paste_deploy_group.name, paste_deploy_opts
+    yield keystone_group, keystone_opts
     yield None, default_client_opts
 
 cfg.CONF.register_group(paste_deploy_group)
+cfg.CONF.register_group(keystone_group)
 profiler.set_defaults(cfg.CONF)
 
 for group, opts in list_opts():

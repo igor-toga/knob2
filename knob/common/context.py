@@ -77,8 +77,8 @@ class MyRequestContext(context.RequestContext):
         #    self.is_admin = is_admin
             
         if auth_token is not None:
-            auth_url = cfg.CONF.auth_url
-            password = cfg.CONF.os_privileged_user_password
+            auth_url = cfg.CONF.keystone.auth_url
+            password = cfg.CONF.keystone.password
             auth = v3.Password(auth_url=auth_url,
                            username=user_name,
                            password=password,
