@@ -13,7 +13,9 @@
 import datetime
 import os
 from keystoneauth1.identity import v3
+from keystoneauth1 import token_endpoint
 from keystoneauth1 import session
+from keystoneclient import client as keystone_client
 
 from oslo_config import cfg
 from oslo_context import context
@@ -75,11 +77,16 @@ class MyRequestContext(context.RequestContext):
         #    self.is_admin = is_admin
             
         if auth_token is not None:
-            auth_url = 'http://172.0.0.102:5000/v3'
-            print('auth_token %s' % auth_token)
-            auth = v3.Token(auth_url, token=auth_token)
+            auth_url = cfg.CONF.auth_url
+            password = cfg.CONF.os_privileged_user_password
+            auth = v3.Password(auth_url=auth_url,
+                           username=user_name,
+                           password=password,
+                           project_name=tenant_name,
+                           user_domain_id='default',
+                           project_domain_name='default')
             self._keystone_session = session.Session(auth=auth, verify=False)
-            print ('created keystone session')
+            
                     
     @property
     def project_id(self):

@@ -43,8 +43,8 @@ class KnobKeystoneContext(base.ConfigurableMiddleware):
         roles = [r.strip() for r in req.headers.get('X_ROLES', '').split(',')]
 
         # Human-friendly names
-        tenant_name = req.headers.get('X_PROJECT_NAME', 'demo')
-        user_name = req.headers.get('X_USER_NAME', 'admin')
+        tenant_name = req.headers.get('X_PROJECT_NAME', '')
+        user_name = req.headers.get('X_USER_NAME', '')
 
         # Use request_id if already set
         req_id = req.environ.get(request_id.ENV_REQUEST_ID)
@@ -55,6 +55,8 @@ class KnobKeystoneContext(base.ConfigurableMiddleware):
         #                             req.headers.get('X_STORAGE_TOKEN'))
         
         # Create a context with the authentication data
+        #import pprint
+        #pprint.pprint (req.environ)
         ctx = context.MyRequestContext(user_id, tenant_id, roles=roles,
                               user_name=user_name, tenant_name=tenant_name,
                               request_id=req_id, auth_token=auth_token)
