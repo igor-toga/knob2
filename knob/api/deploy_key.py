@@ -108,6 +108,8 @@ class DeployKeyThread(Thread):
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         print(self.config)
+        print(server)
+        print(username)
         try:
             ssh_client.connect(
                 server,

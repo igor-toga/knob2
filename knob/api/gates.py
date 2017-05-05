@@ -136,17 +136,21 @@ class GateController(object):
         
         if 'public_net_id' not in create_data:
             raise exc.HTTPBadRequest('Not supplied required parameter')
-
-        if 'image' not in create_data:
+        
+        if create_data['image'] is None:
             create_data['image'] = cfg.CONF.gate.image
 
-        if 'flavor' not in create_data:
+        if create_data['flavor'] is None:
             create_data['flavor'] = cfg.CONF.gate.flavor
- 
+   
+        if create_data['security_groups'] is None:
+            create_data['security_groups'] = cfg.CONF.gate.security_groups
+            
         # create key
         key_class = self._create_keypair(ctx, create_data['name'])
         key = key_class.to_dict()
         create_data['key_name'] = key['name']
+        LOG.info('Created management key for upcoming service gate')
         
         # add controller host as 'allowed' to security group once
         self._update_security_groups(ctx, create_data['security_groups'])
@@ -154,12 +158,19 @@ class GateController(object):
         # create port
         port_id = ctx.neutron_client.create_port(create_data)
         create_data['port-id'] = port_id
+        LOG.info('Created neutron port to deploy gate on it')
         
         # update network configuration with given port id
         server_id = ctx.nova_client.create_service_vm(create_data)
+        if server_id is None:
+           LOG.info('Gate: %s is not running need to clear resources')
+           return {'gates': None}
+        else:
+           LOG.info('Service gate is up and running')
 
         # create fip and to attach to given port
         fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
+        LOG.info('Attached floating IP to make service gate accessible from outside')
 
         # DB update: crete new gate 
         gate_ref = gate_obj.Gate.create(
@@ -168,12 +179,14 @@ class GateController(object):
                              fip_id=fip_id,
                              port_id=port_id,
                              tenant_id=''))
+        LOG.info('Update service database')
         
         # store keypair for further use
         self._store_keypair(ctx, gate_ref['id'], key)
+        LOG.info('Store private key locally')
         
-        LOG.debug('Gate: %s is created successfully' % gate_ref.name)
-        result = self.format_gate(gate_ref) 
+        result = self.format_gate(gate_ref)
+        LOG.info('Gate: %s is created successfully' % gate_ref.name)
         return {'gates': result}
     
 
@@ -202,6 +215,7 @@ class GateController(object):
         
         # remove gate object from DB
         gate_obj.Gate.delete(ctx, gate_id)
+        LOG.info('Gate: %s is created successfully' % gate_id)
         
     def add_target(self, req, gate_id, body):
         """Add target to gate."""

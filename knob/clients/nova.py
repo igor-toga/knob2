@@ -101,27 +101,33 @@ class NovaClient(object):
                 nics=nics,
                 security_groups=[data['security_groups']], 
                 key_name=key_name)
-            print ('returned: %s' % server_ref)
         finally:
             if server_ref is not None:
                 server_id = server_ref.id
+            else:
+                return None
         
         try:
-            print ('server_id: %s' % server_id)
             # wait till server is ready
-            self._check_active(server_id)
+            status = self._check_active(server_id)
             
         except exception.ResourceInError as ex:
+            status = False
             LOG.warning(_LW('Instance (%(server)s) not found: %(ex)s'),
                         {'server': server_id, 'ex': ex})
+            
         except exception.ResourceUnknownStatus as ex:
+            status = False
             LOG.warning(_LW('Instance (%(server)s) bad status while creating: %(ex)s'),
                         {'server': server_id, 'ex': ex})
         
-        print('service is up')
-        return server_id
+        if status is True:
+           return server_id
+        else:
+           return None
     
     def remove_service_vm(self, server_id):
+
         self.client().servers.delete(server_id)
         
         try:
@@ -130,7 +136,7 @@ class NovaClient(object):
         except exception.ServiceNotFound as ex:
             LOG.warning(_LW('Instance (%(server)s) bad status while deleting: %(ex)s'),
                         {'server': server_id, 'ex': ex})
-        print('successfully removed VM with server_id: %s' % server_id)
+        LOG.info('successfully removed VM with server_id: %s' % server_id)
         return
     
     #--------------------------------------------------------------

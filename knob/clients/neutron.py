@@ -63,8 +63,6 @@ class NeutronClient(object):
         self.client().delete_port(port_id)
     
     def create_port(self, create_data):
-        print ('netinfo:')
-        print (create_data)
         request = {'port':
            {
             'network_id': create_data['net_id'],
