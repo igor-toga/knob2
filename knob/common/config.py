@@ -80,13 +80,31 @@ keystone_opts = [
                default='',
                help=_('Privilidged user password'))]
 
+gate_group = cfg.OptGroup('gate')
+gate_opts = [
+    cfg.StrOpt('user',
+               help=_('Username to access gate VM')),
+    cfg.StrOpt('image',
+               help=_('Image name to deploy VM from')),
+    cfg.StrOpt('flavor',
+               help=_('Gate VM flavor')),
+    cfg.StrOpt('security_groups',
+               default='default',
+               help=_('Image name to deploy VM from')),
+    cfg.StrOpt('accessible_network',
+               default='',
+               help=_('Network accesible from outside'))]
+
+
 def list_opts():
     yield paste_deploy_group.name, paste_deploy_opts
     yield keystone_group, keystone_opts
+    yield gate_group, gate_opts
     yield None, default_client_opts
 
 cfg.CONF.register_group(paste_deploy_group)
 cfg.CONF.register_group(keystone_group)
+cfg.CONF.register_group(gate_group)
 profiler.set_defaults(cfg.CONF)
 
 for group, opts in list_opts():

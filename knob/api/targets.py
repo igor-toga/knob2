@@ -12,6 +12,7 @@
 #    under the License.
 
 from webob import exc
+from oslo_config import cfg
 from oslo_log import log as logging
 #from knob.api.openstack.v1 import util
 from knob.common import serializers
@@ -46,13 +47,14 @@ Host %s
   IdentityFile %s
   StrictHostKeyChecking no
   UserKnownHostsFile=/dev/null
-  ProxyCommand ssh -i %s -o StrictHostKeyChecking=no cirros@%s nc %%h %%p
+  ProxyCommand ssh -i %s -o StrictHostKeyChecking=no %s@%s nc %%h %%p
   """ % (
             data['target_name'],
             data['target_ip'],
             data['user'],
             data['target_key_file'],
             data['gate_key_file'],
+            cfg.CONF.gate.user,
             data['gate_ip'],
             
             )

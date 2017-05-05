@@ -44,6 +44,7 @@ function configure_knob {
 
 
     create_knob_conf_keystone
+    create_knob_conf_gate
 
 }
 
@@ -59,6 +60,13 @@ function create_knob_conf_keystone {
     iniset $KNOB_CONF keystone region_name "$REGION_NAME"
 }
 
+function create_knob_conf_gate {
+    iniset $KNOB_CONF gate user "cirros"
+    iniset $KNOB_CONF gate image "cirros-0.3.5-x86_64-disk"
+    iniset $KNOB_CONF gate flavor "m1.tiny"
+    iniset $KNOB_CONF gate security_groups "default"
+    iniset $KNOB_CONF gate accessible_network "public"
+}
 
 # start_knob() - Start running processes, including screen
 function start_knob {

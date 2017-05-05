@@ -15,6 +15,7 @@
 import os
 import uuid
 
+from oslo_config import cfg
 from oslo_log import log as logging
 from webob import exc
 
@@ -76,7 +77,7 @@ class GateController(object):
 
     def index(self, req):
         """List SSH gates."""
-        print ('--------index -------------------------------')
+        LOG.info ('List all gates')
 
         ctx = req.context        
         gates = gate_obj.Gate.get_all(ctx)
@@ -86,7 +87,7 @@ class GateController(object):
 
     def show(self, req, gate_id):
         """Gets detailed information for a SSH gate."""
-        print ('------------in show ---------------------- %s ' % gate_id)
+        LOG.info ('Show information about gate: %s ' % gate_id)
         ctx = req.context
         gates = gate_obj.Gate.get_by_id(ctx, gate_id) 
         return {'gates': gates}
@@ -127,7 +128,7 @@ class GateController(object):
 
     def create(self, req, body):
         """Create a new SSH gate."""        
-        print ('------------in create ---------------------- ')
+        LOG.info ('Creating new gate ')
         create_data = dict((k, body.get(k)) for k in (
             'name', 'net_id', 'public_net_id', 'flavor', 'image', 'security_groups'))
         
@@ -135,28 +136,29 @@ class GateController(object):
         
         if 'public_net_id' not in create_data:
             raise exc.HTTPBadRequest('Not supplied required parameter')
+
+        if 'image' not in create_data:
+            create_data['image'] = cfg.CONF.gate.image
+
+        if 'flavor' not in create_data:
+            create_data['flavor'] = cfg.CONF.gate.flavor
  
         # create key
         key_class = self._create_keypair(ctx, create_data['name'])
         key = key_class.to_dict()
         create_data['key_name'] = key['name']
-        #key = {'name': 'mgmt-key-gate1'}
-        #create_data['key_name'] = key['name']
         
         # add controller host as 'allowed' to security group once
         self._update_security_groups(ctx, create_data['security_groups'])
         
         # create port
-        #port_id = 'e89f6467-00b7-42a3-8b03-8107bd5f428c'
         port_id = ctx.neutron_client.create_port(create_data)
         create_data['port-id'] = port_id
         
         # update network configuration with given port id
-        #server_id = 'c8c845a1-f074-4973-9b91-91f12962a72e'
         server_id = ctx.nova_client.create_service_vm(create_data)
 
         # create fip and to attach to given port
-        #fip_id = 'cad16a3c-2c70-4f76-ba0b-1f6ef31e7930'
         fip_id = ctx.neutron_client.associate_fip(port_id, create_data['public_net_id'])
 
         # DB update: crete new gate 
@@ -179,7 +181,7 @@ class GateController(object):
     def delete(self, req, gate_id):
         """Delete an existing SSH gate."""
         
-        print ('------------in delete ---------------------- %s ' % gate_id)
+        LOG.info ('Deleting gate: %s ' % gate_id)
         ctx = req.context
         # lookup correct gate by id
         gate_ref = gate_obj.Gate.get_by_id(ctx, gate_id)
@@ -205,7 +207,7 @@ class GateController(object):
         """Add target to gate."""
         data = dict((k, body.get(k)) for k in (
             'server_id', 'gate_id', 'name','routable'))
-        print ('------------in add_target: %s to gate %s ' % (data['name'], gate_id))
+        LOG.info ('Add target: %s to gate %s ' % (data['name'], gate_id))
         ctx = req.context
         # verify if target VM exists
         try:
@@ -231,7 +233,7 @@ class GateController(object):
         
     def remove_target(self, req, gate_id, target_id):
         """Remove target to gate."""
-        print ('------------in remove_target: %s to gate %s ' % (target_id, gate_id))
+        LOG.info ('Remove target: %s from gate %s ' % (target_id, gate_id))
         ctx = req.context
         # verify if target VM exists
         try:
@@ -246,7 +248,7 @@ class GateController(object):
         
     def list_targets(self, req, gate_id):
         """List targets on gate."""
-        print ('--------list targets on gate: %s' % gate_id)
+        LOG.info ('List targets on gate: %s' % gate_id)
 
         ctx = req.context
         targets = target_obj.Target.get_all_by_args(ctx, gate_id)
@@ -258,7 +260,7 @@ class GateController(object):
         data = dict((k, body.get(k)) for k in (
             'name', 'key_content'))
         
-        print ('------------in add_key: %s to gate %s ' % 
+        LOG.info ('Add key: %s to gate %s ' % 
                (data['name'], gate_id))
         ctx = req.context
         # DB update 
@@ -274,7 +276,7 @@ class GateController(object):
         key_name = KEY_STORE_PATH + MGMT_KEY_PREFIX + gate_ref['name']
         config = {
             'private_key_file': key_name,
-            'username': 'cirros',
+            'username': cfg.CONF.gate.user,
             'append': True,
             'host': server_ip,
             'key': data['key_content']
@@ -288,7 +290,7 @@ class GateController(object):
         
     def remove_key(self, req, gate_id, key_id):
         """Remove key from gate."""
-        print ('------------in remove_key: %s to gate %s ' % (key_id, gate_id))
+        LOG.info ('Remove key: %s from gate %s ' % (key_id, gate_id))
         ctx = req.context
         
         #verify if gate_id exists
@@ -303,7 +305,7 @@ class GateController(object):
             key_name = KEY_STORE_PATH + MGMT_KEY_PREFIX + gate_ref['name']
             config = {
                 'private_key_file': key_name,
-                'username': 'cirros',
+                'username': cfg.CONF.gate.user,
                 'append': False,
                 'host': server_ip,
                 'key': key_ref['content']
@@ -312,7 +314,7 @@ class GateController(object):
         
     def list_keys(self, req, gate_id):
         """List keys on gate."""
-        print ('--------list keys on gate: %s' % gate_id)
+        LOG.info ('List keys on gate: %s' % gate_id)
 
         ctx = req.context
         keys = key_obj.Key.get_all_by_args(ctx, gate_id)
