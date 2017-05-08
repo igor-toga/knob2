@@ -205,7 +205,6 @@ class NovaClient(object):
     def get_ip(self, server_id, net_type, ip_version, extended_type):
         """Return the server's IP of the given type and version."""
         server = self.get_server(server_id)
-        print (server.addresses)
         if net_type in server.addresses:
             for ip in server.addresses[net_type]:
                 if ip['version'] == ip_version and \

@@ -123,8 +123,7 @@ class GateController(object):
         # remove knob key reference
         key_obj.Key.delete_by_name(ctx, key_name)
         
-    def _update_security_groups(self, ctx, security_group):
-        pass
+        
 
     def create(self, req, body):
         """Create a new SSH gate."""        
@@ -133,6 +132,9 @@ class GateController(object):
             'name', 'net_id', 'public_net_id', 'flavor', 'image', 'security_groups'))
         
         ctx = req.context
+        
+        project_id = ctx.keystone_client.projects.list(name=ctx.tenant_name)[0].id
+        LOG.debug('Identify project id: %s from name' % project_id)
         
         if 'public_net_id' not in create_data:
             raise exc.HTTPBadRequest('Not supplied required parameter')
@@ -145,16 +147,17 @@ class GateController(object):
    
         if create_data['security_groups'] is None:
             create_data['security_groups'] = cfg.CONF.gate.security_groups
-            
+        
+        # add controller host as 'allowed' to security group once
+        ctx.neutron_client.update_security_groups(project_id, 
+                                                  create_data['security_groups'],
+                                                  create_data['public_net_id'])
         # create key
         key_class = self._create_keypair(ctx, create_data['name'])
         key = key_class.to_dict()
         create_data['key_name'] = key['name']
         LOG.info('Created management key for upcoming service gate')
-        
-        # add controller host as 'allowed' to security group once
-        self._update_security_groups(ctx, create_data['security_groups'])
-        
+                
         # create port
         port_id = ctx.neutron_client.create_port(create_data)
         create_data['port-id'] = port_id
@@ -178,7 +181,7 @@ class GateController(object):
                              server_id=server_id,
                              fip_id=fip_id,
                              port_id=port_id,
-                             tenant_id=''))
+                             tenant_id=project_id))
         LOG.info('Update service database')
         
         # store keypair for further use
@@ -188,8 +191,6 @@ class GateController(object):
         result = self.format_gate(gate_ref)
         LOG.info('Gate: %s is created successfully' % gate_ref.name)
         return {'gates': result}
-    
-
     
     def delete(self, req, gate_id):
         """Delete an existing SSH gate."""
@@ -202,18 +203,23 @@ class GateController(object):
         fip_id = gate_ref['fip_id']
         port_id = gate_ref['port_id']
         # remove server
+        LOG.info ('Removing service VM with ID: %s ' % server_id)
         ctx.nova_client.remove_service_vm(server_id)
         
         # disassociate fip & delete port
+        LOG.info ('Disassociate floating ip: %s ' % fip_id)
         ctx.neutron_client.disassociate_fip(fip_id)
         
         # remove neutron port explicitly
+        LOG.info ('Deleting knob service port: %s ' % port_id)
         ctx.neutron_client.delete_port(port_id)
 
         #remove mgmt key pair
+        LOG.info ('Deleting mgmt. public key from Nova: %s ' % gate_ref['name'])
         self._delete_keypair(ctx,  gate_ref['name'])
         
         # remove gate object from DB
+        LOG.info ('Delete gate entry from service database')
         gate_obj.Gate.delete(ctx, gate_id)
         LOG.info('Gate: %s is created successfully' % gate_id)
         

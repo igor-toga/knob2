@@ -15,7 +15,7 @@ import os
 from keystoneauth1.identity import v3
 from keystoneauth1 import token_endpoint
 from keystoneauth1 import session
-from keystoneclient import client as keystone_client
+from keystoneclient.v3 import client
 
 from oslo_config import cfg
 from oslo_context import context
@@ -64,6 +64,7 @@ class MyRequestContext(context.RequestContext):
         self._neutron_client = None
         self._barbican_client = None
         self._nova_client = None
+        self._keystone_client = None
         
         self.policy = policy.Enforcer()
 
@@ -131,6 +132,12 @@ class MyRequestContext(context.RequestContext):
         if self._nova_client is None:
             self._nova_client = nova.NovaClient(self._keystone_session)
         return self._nova_client
+    
+    @property
+    def keystone_client(self):
+        if self._keystone_client is None:
+            self._keystone_client = client.Client(session=self._keystone_session)
+        return self._keystone_client
 
 
 def get_admin_context(show_deleted=False):

@@ -24,7 +24,11 @@
 import os
 import socket
 import sys
+from oslo_log import log as logging
 from threading import Thread
+
+
+LOG = logging.getLogger(__name__)
 
 # conditional imports
 try:
@@ -34,9 +38,10 @@ except ImportError:
 try:
     import paramiko
 except ImportError:
-    print ("FATAL: paramiko libraries not present.")
-    print ("run 'pip install paramiko' to fix")
+    LOG.error ("FATAL: paramiko libraries not present.")
+    LOG.error ("run 'pip install paramiko' to fix")
     sys.exit(1)
+
 
 
 EXIT_COMMAND = "exit"
@@ -84,7 +89,7 @@ class DeployKeyThread(Thread):
             SSH_DIR,
             AUTHORIZED_KEYS)
         suffix = "%s" % (statuz)
-        print(prefix[:MAX_HOST_WIDTH].ljust(MAX_HOST_WIDTH, ' ') + " " + suffix)
+        LOG.info('%s' % prefix[:MAX_HOST_WIDTH].ljust(MAX_HOST_WIDTH, ' ') + " " + suffix)
 
     def _prepare_cmd(self, append_mode):
         key = self.config['key']
@@ -101,15 +106,12 @@ class DeployKeyThread(Thread):
                     key, SSH_DIR, AUTHORIZED_KEYS,
                     SSH_DIR, AUTHORIZED_KEYS,
                     SSH_DIR, AUTHORIZED_KEYS)
-        print (cmd)
+        LOG.debug (cmd)
         return cmd
         
     def _deploy_key(self, server, username):
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        print(self.config)
-        print(server)
-        print(username)
         try:
             ssh_client.connect(
                 server,
@@ -117,9 +119,7 @@ class DeployKeyThread(Thread):
                 key_filename=self.config['private_key_file'],
                 port=SSH_PORT,
                 timeout=TIMEOUT_SECONDS)
-            print('before from transport')
             #sftp_client = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
-            print('after from transport')
         except socket.error:
             return CONNECTION_FAILURE
         except paramiko.AuthenticationException:
@@ -133,20 +133,17 @@ class DeployKeyThread(Thread):
             append_mode = True
         cmd = self._prepare_cmd(append_mode)
         #try:
-            #print('before put: %s' % script)
             #sftp_client.put(script, script)
-            #print('after put: %s' % script)
         #except IOError:
         #    return IO_FAILURE
         #_, stdout, stderr = ssh_client.exec_command('/bin/sh %s' % script)
         _, stdout, stderr = ssh_client.exec_command('%s' % cmd)
         if not stdout.channel.recv_exit_status() == 0:
-            print (not stdout.channel.recv_exit_status())
-            print ("out: %s\n err: %s\n" %(stdout.read().strip(), stderr.read().strip()))
+            LOG.warning (not stdout.channel.recv_exit_status())
+            LOG.warning ("out: %s\n err: %s\n" %(stdout.read().strip(), stderr.read().strip()))
             return UNKNOWN_ERROR
-        #print('before remove: %s' % script)
         #sftp_client.remove(script)
-        #print('after remove: %s' % script)
+
         return stdout.read().strip()
 
     def run(self):
@@ -234,7 +231,7 @@ def deploy_key(config):
     queue = Queue(maxsize=10)
 
     if not config['private_key_file']:
-        print 'Cant continue without private file'
+        LOG.warning( 'Cant continue without private file')
         exit
     
     #print "Starting thread %d" % i
@@ -243,9 +240,9 @@ def deploy_key(config):
     deployer_thread.start()
     
     if 'append' in config:
-        print ("Distributing key to remote hosts in smart-append mode.")
+        LOG.info ("Distributing key to remote hosts in smart-append mode.")
     else:
-        print ("Removing key  from remote hosts in smart-remove mode.")
+        LOG.info ("Removing key  from remote hosts in smart-remove mode.")
     
     # Either use the hosts supplied on the command line (the preference) or use hosts read from
     # standard in.

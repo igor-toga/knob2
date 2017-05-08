@@ -12,12 +12,13 @@
 #    under the License.
 
 from neutronclient.common import exceptions
-#from neutronclient.neutron import v2_0 as neutronV20
-#from neutronclient.v2_0 import client as neutron_client
 from neutronclient.neutron import client as neutron_client
+from oslo_log import log as logging
 from oslo_utils import uuidutils
 
 from knob.common import exception
+
+LOG = logging.getLogger(__name__)
 
 
 class NeutronClient(object):
@@ -189,3 +190,29 @@ class NeutronClient(object):
                         raise exception.PhysicalResourceNameAmbiguity(name=sg)
         return seclist
 
+    def update_security_groups(self, project_id, security_group, public_net_id):
+        group=self.client().list_security_groups(project_id=project_id, 
+                                                      name=security_group,
+                                                      fields="id")
+        group_id=group['security_groups'][0]['id']
+        LOG.info('Found \'%s\' security group with group id: %s' % (security_group, group_id))
+        
+        subnet = self.client().list_subnets(network_id=public_net_id)
+        ip_prefix=subnet['subnets'][0]['cidr']
+        LOG.info('Adding new SSH ingress rule to CIDR range %s' % ip_prefix)
+        try:
+           req = {
+            "security_group_rule": {
+                "direction": "ingress",
+                "port_range_min": "22",
+                "ethertype": "IPv4",
+                "port_range_max": "22",
+                "protocol": "tcp",
+                "remote_ip_prefix": ip_prefix,
+                "security_group_id": group_id
+                }
+           }
+           self.client().create_security_group_rule(req)
+           LOG.debug('Rule was added succesfully')
+        except exceptions.Conflict:
+           LOG.debug('Rule is already exists')

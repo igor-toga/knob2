@@ -51,12 +51,8 @@ class KnobKeystoneContext(base.ConfigurableMiddleware):
 
         # Get the auth token
         auth_token = req.headers.get('X_AUTH_TOKEN')
-        #auth_token = req.headers.get('X_AUTH_TOKEN',
-        #                             req.headers.get('X_STORAGE_TOKEN'))
         
         # Create a context with the authentication data
-        #import pprint
-        #pprint.pprint (req.environ)
         ctx = context.MyRequestContext(user_id, tenant_id, roles=roles,
                               user_name=user_name, tenant_name=tenant_name,
                               request_id=req_id, auth_token=auth_token)

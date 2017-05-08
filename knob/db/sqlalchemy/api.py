@@ -147,7 +147,6 @@ def target_get_all_by_args(context, gate_id, target_id):
                 filter_by(gate_id=gate_id).
                 filter_by(server_id=target_id).all())
     else:
-        print ('target filter')
         return (context.session.query(models.Target).
                 filter_by(gate_id=gate_id).all())
 
