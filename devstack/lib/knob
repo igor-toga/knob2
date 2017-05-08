@@ -62,7 +62,7 @@ function create_knob_conf_keystone {
 
 function create_knob_conf_gate {
     iniset $KNOB_CONF gate user "cirros"
-    iniset $KNOB_CONF gate image "cirros-0.3.5-x86_64-disk"
+    iniset $KNOB_CONF gate image "cirros-0.3.4-x86_64-uec"
     iniset $KNOB_CONF gate flavor "m1.tiny"
     iniset $KNOB_CONF gate security_groups "default"
     iniset $KNOB_CONF gate accessible_network "public"
